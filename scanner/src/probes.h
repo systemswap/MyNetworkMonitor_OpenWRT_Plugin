@@ -13,8 +13,10 @@
 #include <stdint.h>
 
 /* Length of the detail a probe reports, including the terminating NUL; long
- * enough for the identification of a controller (order number, firmware, name). */
-#define MNM_DETAIL_LEN 160
+ * enough for the identification of a controller (order number, firmware, name)
+ * or a web page with its certificate. A detail that starts with "Name: <name>"
+ * (up to " · ") names the device, if nothing else has named it. */
+#define MNM_DETAIL_LEN 256
 
 struct mnm_targets;
 
@@ -59,6 +61,13 @@ const struct mnm_probe *mnm_probe_find(const char *id);
 
 /* All probes, terminated by an entry with id NULL. */
 extern const struct mnm_probe mnm_probes[];
+
+/* An HTTP answer: a status line "HTTP/x.y NNN" (2xx to 5xx) at the start, or
+ * "<html" anywhere. */
+int mnm_http_identify(const uint8_t *r, size_t len);
+
+/* The value of the Server header of an HTTP answer; 1 if there is one. */
+int mnm_http_describe(const uint8_t *r, size_t len, char *out, size_t outlen);
 
 /* Copies printable characters of an answer into out (for details). */
 void mnm_printable(const uint8_t *in, size_t len, char *out, size_t outlen);

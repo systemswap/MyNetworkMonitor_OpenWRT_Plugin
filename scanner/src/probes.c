@@ -15,7 +15,9 @@
 
 #include "probes_steps.h"
 #include "probes_smb.h"
+#include "probes_snmp.h"
 #include "probes_udp.h"
+#include "probes_web.h"
 #include "targets.h"
 
 /* ------------------------------------------------------------- helpers */
@@ -483,7 +485,7 @@ static size_t build_http(uint32_t address, uint8_t *buf, size_t cap)
 }
 
 /* A status line "HTTP/x.y NNN" (2xx to 5xx) at the start, or "<html" anywhere. */
-static int identify_http(const uint8_t *r, size_t len)
+int mnm_http_identify(const uint8_t *r, size_t len)
 {
 	if (len >= 12 && memcmp(r, "HTTP/", 5) == 0 && isdigit(r[5]) && r[6] == '.' && isdigit(r[7]) && r[8] == ' ' &&
 	    r[9] >= '2' && r[9] <= '5' && isdigit(r[10]) && isdigit(r[11]))
@@ -492,7 +494,7 @@ static int identify_http(const uint8_t *r, size_t len)
 }
 
 /* The value of the Server header, if any. */
-static int describe_http(const uint8_t *r, size_t len, char *out, size_t outlen)
+int mnm_http_describe(const uint8_t *r, size_t len, char *out, size_t outlen)
 {
 	for (size_t i = 0; i + 8 < len; i++) {
 		if ((i == 0 || r[i - 1] == '\n') && mnm_contains_ci(r + i, 7, "server:")) {
@@ -536,14 +538,15 @@ const struct mnm_probe mnm_probes[] = {
 	{ "ssh", "SSH", FIXED(hello_ssh), identify_ssh, describe_ssh, NULL, MNM_TCP, NULL, NULL },
 	{ "teamviewer", "TeamViewer", FIXED(hello_teamviewer), identify_teamviewer, NULL, NULL, MNM_TCP, NULL, NULL },
 	{ "ultravnc", "VNC", FIXED(hello_ultravnc), identify_vnc, describe_vnc, NULL, MNM_TCP, NULL, NULL },
-	{ "webservices", "HTTP", NULL, 0, build_http, identify_http, describe_http, NULL, MNM_TCP, NULL, NULL },
+	{ "webservices", "HTTP", NULL, 0, build_http, mnm_http_identify, mnm_http_describe, NULL, MNM_TCP, NULL, NULL },
 	{ "dns_tcp", "DNS", FIXED(hello_dns_tcp), identify_dns_tcp, NULL, NULL, MNM_TCP, NULL, NULL },
 	{ NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, MNM_TCP, NULL, NULL },
 };
 
 const struct mnm_probe *mnm_probe_find(const char *id)
 {
-	static const struct mnm_probe *const tables[] = { mnm_probes, mnm_probes_steps, mnm_probes_udp, mnm_probes_smb };
+	static const struct mnm_probe *const tables[] = { mnm_probes, mnm_probes_steps, mnm_probes_udp, mnm_probes_smb,
+							  mnm_probes_web, mnm_probes_snmp };
 	for (size_t t = 0; t < sizeof(tables) / sizeof(tables[0]); t++)
 		for (const struct mnm_probe *p = tables[t]; p->id; p++)
 			if (strcmp(p->id, id) == 0)

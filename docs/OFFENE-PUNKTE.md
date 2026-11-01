@@ -11,15 +11,12 @@ Ausbaustufen, jede für sich benutzbar:
 1. **Geräteliste im Test bestätigen** (gebaut in 0.0.4-beta): Seite mit Tabelle und Details vom Nutzer ansehen lassen;
    Hersteller und MAC-Adressen auf einem Gerät im selben Netzsegment prüfen (MX4200 oder VM an `br0`).
 2. **Dienst-Sonden, Details** (Stufe 3b fertig mit 0.0.23-beta): OPC-UA-Endpunkte, SECS/GEM-Modell (S1F1).
-3. **SNMP, Zertifikate:** SNMP v2c (Systemname, Beschreibung), HTTPS-Erkennung und Zertifikate von Webseiten
-   (Aussteller, Gültigkeit, Namen) über mbedTLS.
-
-4. **Gerätesuche gründlicher:** eine zweite ARP-Runde für Adressen ohne Antwort (Geräte im WLAN-Stromsparmodus
+3. **Gerätesuche gründlicher:** eine zweite ARP-Runde für Adressen ohne Antwort (Geräte im WLAN-Stromsparmodus
    verpassen eine einzelne Anfrage). Grund: Sonden gehen nur an Geräte der Tabelle (`docs/Architektur.md`), ein
    übersehenes Gerät bekommt keine. In anderen Netzen hinter einem Router gilt als Gerät, wer auf Ping antwortet
    (Entscheidung des Nutzers, 01.11.2026) – kein zusätzliches Anklopfen an TCP-Ports.
 
-5. **Test im Firmennetz** (Wunsch des Nutzers, 01.11.2026; im Heimnetz gibt es diese Geräte nicht). Die Sonden
+4. **Test im Firmennetz** (Wunsch des Nutzers, 01.11.2026; im Heimnetz gibt es diese Geräte nicht). Die Sonden
    sind gegen nachgespielte Geräte getestet und im Heimnetz ohne Fehlerkennung, aber noch an keinem echten Gerät:
    - MS-SQL auf 1433 (Version, Verschlüsselung) und eine benannte Instanz über den SQL-Server-Browser (UDP 1434),
    - OPC UA (4840),
@@ -30,13 +27,14 @@ Ausbaustufen, jede für sich benutzbar:
    - BACnet (UDP 47808) mit Name und Hersteller,
    - DHCP hinter einem Relay (Serverkennung),
    - SMB-Versionen an Windows-Servern (auch SMB 1.0, wo noch an),
-   - ONVIF-Kameras (im Heimnetz keine), NetBIOS mit Domänen statt Arbeitsgruppen.
+   - ONVIF-Kameras (im Heimnetz keine), NetBIOS mit Domänen statt Arbeitsgruppen,
+   - SNMP an Switches und Zebra-Druckern, HTTPS an Geräten mit Zertifikaten einer Firmen-CA.
    Dabei Laufzeit des ganzen Scans und Last auf dem Router ansehen. Echte Antworten als Testfälle übernehmen
    (Adressen und Namen erfunden, Mitschnitte nur im lokalen Testordner).
 
 ## Später
 
-- **Alle Architekturen bauen:** GitHub-Bau mit dem SDK je Architektur – erst, wenn der Nutzer einen Remote will.
+- **Alle Architekturen bauen:** GitHub-Bau mit dem SDK je Architektur – nur auf Anweisung des Nutzers.
 - **Test auf einem echten Router:** Pakete für Linksys MX4200 v1 (`aarch64_cortex-a53`, OpenWrt 25.12) ab 0.0.26-beta
   gebaut; Test auf dem Gerät steht aus (Installation, Scan, Rundrufe über WLAN-Brücke, Laufzeit und Speicher).
 

@@ -35,4 +35,7 @@ void test_bc(void);
 /* The tests of the TLS connections (test_tls.c). */
 void test_tls(void);
 
+/* The tests of the web probes and SNMP (test_web_snmp.c). */
+void test_web_snmp(void);
+
 #endif

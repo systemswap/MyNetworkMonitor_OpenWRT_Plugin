@@ -75,6 +75,9 @@ static void test_ssdp_upnp(void)
 	CHECK(mnm_upnp_describe(S("<root><device/></root>"), d, sizeof(d)) == 0);
 	CHECK(mnm_xml_text(S("<a><b/><B>x<c>y</c>z</B></a>"), "b", v, sizeof(v)) == 0);   /* the first one is empty */
 	CHECK(mnm_xml_text(S("<a><n:x>1<n:x>2</n:x>3</n:x></a>"), "x", v, sizeof(v)) && strcmp(v, "123") == 0);
+	/* HTML entities as device pages use them; a space in the middle of a run of spaces collapses */
+	CHECK(mnm_xml_text(S("<title>Printer&nbsp;&nbsp;&nbsp;192.0.2.6 &auml;&#252;&#x20AC; &bogus; &amp;</title>"), "title",
+			   v, sizeof(v)) && strcmp(v, "Printer 192.0.2.6 \xc3\xa4\xc3\xbc\xe2\x82\xac &bogus; &") == 0);
 	for (size_t cut = 0; cut < sizeof(xml) - 1; cut++)
 		mnm_upnp_describe(xml, cut, d, sizeof(d));
 }

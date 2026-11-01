@@ -255,3 +255,26 @@ Zeitlich geordnet, neue ans Ende.
   (`make test MBEDTLS=<ordner>`), mit Thread-Unterstützung wie bei OpenWrt; der TLS-Test erzeugt zur Laufzeit ein
   selbst signiertes Zertifikat.
 
+### 01.11.2026 – HTTPS, Webseite mit Zertifikat und SNMP
+
+- **HTTPS** (`webservices_tls`, Dienst „HTTPS“): die zweite Hälfte der Web-Sonde des Desktop-Programms – derselbe
+  Port über TLS mit dessen kurzer Anfrage (`Host`, `Connection: close`), ohne SNI wie dort (Ziel ist eine Adresse).
+  Erkannt wie über HTTP (Statuszeile oder `<html`); die Angabe nennt den `Server`-Kopf und die TLS-Version. Antwortet
+  ein Port mit TLS, ohne dass ein Handschlag mit TLS 1.2/1.3 gelingt, wird er als TLS gemeldet („only with older
+  versions or ciphers“) – das Desktop-Programm zählt ihn als Fehler.
+- **Webseite** (`webidentity`, Dienst „Web page“, Katalog „Web page and certificate“, Ports 80, 443, 8080, 8443): die
+  Anfrage des Desktop-Programms (`User-Agent: MyNetworkMonitor`, `Accept: text/html`), TLS nur auf 443 und 8443, je
+  2,5 s für Verbindung und Antwort, gelesen bis `</title>`, Verbindungsende oder 64 KiB. Angaben wie dort: Titel
+  (HTML-Entitäten entschlüsselt, Leerraum zusammengefasst), Server, für wen das Zertifikat ist, wer es ausstellte,
+  bis wann es gilt („ - EXPIRED“), selbst signiert, weitere Namen. Abweichungen: Jeder Port wird gemeldet, nicht nur
+  der erste mit Ergebnis; die weiteren Namen werden immer gelesen (das Desktop-Programm findet sie unter Linux nie,
+  weil es nach „=“ in der Textform sucht); ein Port, der ohne Inhalt schließt, ist kein Fund.
+- **SNMP** (`snmp`, UDP 161 an jedes Gerät der Tabelle): die Pakete der SNMP-Bibliothek des Desktop-Programms, Byte
+  für Byte (54, abgeglichen); Kennung der Anfrage aus einem Zähler mit zufälligem Start im Bereich, den die
+  Bibliothek mit vier Bytes kodiert – so behalten die Pakete ihre Länge. Ablauf wie dort: Systemgruppe (v1, 2 s),
+  Seriennummer, Hardware-Adressen der Schnittstellen 1 bis 50, Zusatzfragen für Zebra und WAGO (v2c). Abweichungen:
+  Die 50 Adressfragen enden bei der ersten ohne jede Antwort (das Desktop-Programm wartet bis zu 100 s); Werte, die
+  keine druckbaren Zeichen sind, aber UTF-8, werden als Text gezeigt, andere als Hex – nie wird ein Text wie „12“
+  als Hex gelesen; v2c-Ausnahmen (noSuchObject) bleiben leer statt als Text zu erscheinen. Der Systemname füllt einen
+  fehlenden Gerätenamen (Angabe „Name: …“ am Anfang, allgemein in `main.c`).
+

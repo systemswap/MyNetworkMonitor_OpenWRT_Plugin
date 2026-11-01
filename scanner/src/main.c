@@ -130,8 +130,19 @@ static void on_service(void *context, uint32_t address, uint16_t port, const str
 {
 	struct scan *scan = context;
 	struct mnm_device *d = mnm_devices_find(&scan->devices, address);
-	if (d)
-		mnm_devices_add_service(&scan->devices, d, probe->id, probe->name, port, probe->transport != MNM_TCP, detail);
+	if (!d)
+		return;
+	mnm_devices_add_service(&scan->devices, d, probe->id, probe->name, port, probe->transport != MNM_TCP, detail);
+	/* "Name: <name>" at the start of a detail names the device (SNMP), if nothing else has */
+	if (!d->hostname[0] && detail && strncmp(detail, "Name: ", 6) == 0) {
+		const char *end = strstr(detail + 6, " · ");
+		size_t n = end ? (size_t)(end - detail - 6) : strlen(detail + 6);
+		if (n >= sizeof(d->hostname))
+			n = sizeof(d->hostname) - 1;
+		memcpy(d->hostname, detail + 6, n);
+		d->hostname[n] = '\0';
+		scan->devices.changed = 1;
+	}
 }
 
 /* "ssh=22" or "web=80,443,8080": a known probe and its ports. */

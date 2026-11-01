@@ -11,11 +11,11 @@
 		{ "id": "identify", "name": "Identifying devices", "icon": "🪪", "items": [
 			{ "id": "dnsnames", "name": "Names from DNS", "hint": "Reverse lookup at the router and the home router before it", "available": true, "default": true },
 			{ "id": "netbios", "name": "NetBIOS names", "hint": "Computer names in Windows and Samba networks", "default": true, "broadcast": "netbios" },
-			{ "id": "webpage", "name": "Web page and certificate", "hint": "Title of the web interface, certificate issuer and expiry", "available": false, "default": true },
-			{ "id": "snmp", "name": "SNMP", "hint": "Name and description of printers, switches and NAS", "available": false, "default": true }
+			{ "id": "webpage", "name": "Web page and certificate", "hint": "Title of the web interface, certificate issuer and expiry", "tcp": [80, 443, 8080, 8443], "default": true, "probes": ["webidentity"] },
+			{ "id": "snmp", "name": "SNMP", "hint": "Name and description of printers, switches and NAS", "udp": [161], "default": true, "udp_probes": ["snmp"] }
 		] },
 		{ "id": "network", "name": "Network services", "icon": "🌍", "items": [
-			{ "id": "web", "name": "Web servers", "tcp": [80, 443, 1880, 3000, 5000, 5001, 8080, 8086, 8443], "default": true, "probes": ["webservices"] },
+			{ "id": "web", "name": "Web servers", "tcp": [80, 443, 1880, 3000, 5000, 5001, 8080, 8086, 8443], "default": true, "probes": ["webservices", "webservices_tls"] },
 			{ "id": "ssh", "name": "SSH", "tcp": [22], "default": true, "probes": ["ssh"] },
 			{ "id": "ftp", "name": "FTP", "tcp": [21], "default": true, "probes": ["ftp"] },
 			{ "id": "dns", "name": "DNS", "tcp": [53], "udp": [53], "default": true, "probes": ["dns_tcp"], "udp_probes": ["dns_udp"] },

@@ -552,6 +552,7 @@ int main(void)
 	test_probes_udp();
 	test_bc();
 	test_tls();
+	test_web_snmp();
 	printf("%d checks, %d failed\n", checks, failures);
 	return failures ? 1 : 0;
 }

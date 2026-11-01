@@ -35,7 +35,7 @@ TLS_LIBS   := -lmbedtls -lmbedx509 -lmbedcrypto
 endif
 
 LIBSRC  := src/targets.c src/ports.c src/json.c src/tcpscan.c src/packets.c src/textdata.c src/devices.c \
-           src/discover.c src/probes.c src/probes_steps.c src/probes_udp.c src/probes_smb.c src/probe_engine.c src/netio.c src/dnsname.c src/bc_packets.c src/bc_parse.c src/bc_discover.c src/http_get.c src/tlsconn.c
+           src/discover.c src/probes.c src/probes_steps.c src/probes_udp.c src/probes_smb.c src/probes_web.c src/probes_snmp.c src/probe_engine.c src/netio.c src/dnsname.c src/bc_packets.c src/bc_parse.c src/bc_discover.c src/http_get.c src/tlsconn.c
 SRC     := src/main.c $(LIBSRC)
 
 .PHONY: all test clean
@@ -46,10 +46,10 @@ $(BUILD)/mynetworkmonitor-scan: $(SRC) src/*.h $(wildcard ../VERSION)
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) $(WARN) $(DEFS) $(TLS_CFLAGS) $(SRC) -o $@ $(LDFLAGS) $(TLS_LIBS) -pthread
 
-$(BUILD)/tests: tests/tests.c tests/test_steps.c tests/test_udp.c tests/test_bc.c tests/test_tls.c tests/check.h $(LIBSRC) src/*.h
+$(BUILD)/tests: tests/tests.c tests/test_steps.c tests/test_udp.c tests/test_bc.c tests/test_tls.c tests/test_web_snmp.c tests/check.h $(LIBSRC) src/*.h
 	@mkdir -p $(BUILD)
 	$(CC) -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer $(WARN) $(DEFS) \
-	      $(TLS_CFLAGS) tests/tests.c tests/test_steps.c tests/test_udp.c tests/test_bc.c tests/test_tls.c $(LIBSRC) -o $@ \
+	      $(TLS_CFLAGS) tests/tests.c tests/test_steps.c tests/test_udp.c tests/test_bc.c tests/test_tls.c tests/test_web_snmp.c $(LIBSRC) -o $@ \
 	      $(TLS_LIBS) -pthread
 
 test: $(BUILD)/tests

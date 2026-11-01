@@ -21,6 +21,7 @@
 #include <mbedtls/x509_csr.h>
 #include <psa/crypto.h>
 
+#include "../src/probes.h"
 #include "../src/tlsconn.h"
 #include "check.h"
 
@@ -185,6 +186,16 @@ void test_tls(void)
 	pthread_join(thread, NULL);
 	close(s.listen_fd);
 	CHECK(strncmp(s.request, "GET / HTTP/1.1\r\n", 16) == 0);
+
+	/* the web probe over TLS against the same server: recognised, with the TLS version */
+	char d[MNM_DETAIL_LEN];
+	memset(s.request, 0, sizeof(s.request));
+	run_server(TLS_SERVER, &s, &thread, &port);
+	CHECK(mnm_probe_find("webservices_tls")->run(0x7f000001u, port, 500, d, sizeof(d)) == 1);
+	CHECK(strncmp(d, "TLSv1.", 6) == 0);
+	pthread_join(thread, NULL);
+	close(s.listen_fd);
+	CHECK(strcmp(s.request, "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n") == 0);
 
 	/* a server that answers, but without TLS */
 	run_server(PLAIN_SERVER, &s, &thread, &port);

@@ -131,32 +131,59 @@ static int name_is(const char *xml, size_t start, size_t end, const char *name)
 	return end - start == n && strncasecmp(xml + start, name, n) == 0;
 }
 
-/* Appends the text between start and end with the five predefined entities
- * (XML 1.0, 4.6) and character references (4.1) decoded. */
+/* Writes code point c as UTF-8 at buf[n] if it fits; returns the new length. */
+static size_t put_utf8(char *buf, size_t n, size_t cap, unsigned long c)
+{
+	unsigned char u[4];
+	size_t k;
+	if (c < 0x20 || c == 0x7f || (c >= 0xd800 && c <= 0xdfff) || c > 0x10ffff)
+		c = '?';
+	if (c < 0x80)
+		u[0] = (unsigned char)c, k = 1;
+	else if (c < 0x800)
+		u[0] = (unsigned char)(0xc0 | c >> 6), u[1] = (unsigned char)(0x80 | (c & 0x3f)), k = 2;
+	else if (c < 0x10000)
+		u[0] = (unsigned char)(0xe0 | c >> 12), u[1] = (unsigned char)(0x80 | (c >> 6 & 0x3f)),
+		u[2] = (unsigned char)(0x80 | (c & 0x3f)), k = 3;
+	else
+		u[0] = (unsigned char)(0xf0 | c >> 18), u[1] = (unsigned char)(0x80 | (c >> 12 & 0x3f)),
+		u[2] = (unsigned char)(0x80 | (c >> 6 & 0x3f)), u[3] = (unsigned char)(0x80 | (c & 0x3f)), k = 4;
+	if (n + k >= cap)
+		return n;
+	memcpy(buf + n, u, k);
+	return n + k;
+}
+
+/* Appends the text between start and end with entities decoded: the five of
+ * XML (XML 1.0, 4.6), character references (4.1) and the named ones of HTML
+ * that device pages use (no-break space as a space, umlauts, sharp s, (c), (R)). */
 static size_t append_text(const char *xml, size_t start, size_t end, char *buf, size_t n, size_t cap)
 {
-	static const struct { const char *entity; char c; } entities[] = {
-		{ "&amp;", '&' }, { "&lt;", '<' }, { "&gt;", '>' }, { "&quot;", '"' }, { "&apos;", '\'' },
+	static const struct { const char *name; unsigned long c; } entities[] = {
+		{ "amp", '&' }, { "lt", '<' }, { "gt", '>' }, { "quot", '"' }, { "apos", '\'' }, { "nbsp", ' ' },
+		{ "auml", 0xe4 }, { "ouml", 0xf6 }, { "uuml", 0xfc }, { "Auml", 0xc4 }, { "Ouml", 0xd6 },
+		{ "Uuml", 0xdc }, { "szlig", 0xdf }, { "copy", 0xa9 }, { "reg", 0xae },
 	};
 	for (size_t i = start; i < end && n + 1 < cap;) {
 		if (xml[i] == '&') {
-			size_t k;
-			for (k = 0; k < 5; k++) {
-				size_t l = strlen(entities[k].entity);
-				if (i + l <= end && memcmp(xml + i, entities[k].entity, l) == 0) {
-					buf[n++] = entities[k].c;
-					i += l;
-					break;
+			const char *semi = memchr(xml + i, ';', end - i);
+			size_t l = semi ? (size_t)(semi - xml) - i - 1 : 0;
+			if (semi && l >= 2 && l <= 8) {
+				const char *name = xml + i + 1;
+				if (name[0] == '#') {
+					unsigned long c = name[1] == 'x' || name[1] == 'X' ? strtoul(name + 2, NULL, 16)
+											: strtoul(name + 1, NULL, 10);
+					n = put_utf8(buf, n, cap, c);
+					i += l + 2;
+					continue;
 				}
-			}
-			if (k < 5)
-				continue;
-			if (i + 3 < end && xml[i + 1] == '#') {
-				const char *semi = memchr(xml + i, ';', end - i);
-				if (semi && semi - (xml + i) < 10) {
-					long v = xml[i + 2] == 'x' ? strtol(xml + i + 3, NULL, 16) : strtol(xml + i + 2, NULL, 10);
-					buf[n++] = (v >= 0x20 && v < 0x7f) ? (char)v : '?';
-					i = (size_t)(semi - xml) + 1;
+				size_t k;
+				for (k = 0; k < sizeof(entities) / sizeof(entities[0]); k++)
+					if (strlen(entities[k].name) == l && memcmp(name, entities[k].name, l) == 0)
+						break;
+				if (k < sizeof(entities) / sizeof(entities[0])) {
+					n = put_utf8(buf, n, cap, entities[k].c);
+					i += l + 2;
 					continue;
 				}
 			}
