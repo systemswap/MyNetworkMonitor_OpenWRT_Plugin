@@ -18,9 +18,9 @@ Ausbaustufen, jede für sich benutzbar:
    Webseiten (Aussteller, Gültigkeit, Namen) über mbedTLS.
 
 5. **Gerätesuche gründlicher:** eine zweite ARP-Runde für Adressen ohne Antwort (Geräte im WLAN-Stromsparmodus
-   verpassen eine einzelne Anfrage); in eigenen Bereichen hinter einem anderen Router, wo es kein ARP gibt, zusätzlich
-   ein kurzes Anklopfen an typischen TCP-Ports (Windows beantwortet Ping ab Werk nicht). Grund: Sonden gehen nur an
-   Geräte der Tabelle (`docs/Architektur.md`), ein übersehenes Gerät bekommt keine.
+   verpassen eine einzelne Anfrage). Grund: Sonden gehen nur an Geräte der Tabelle (`docs/Architektur.md`), ein
+   übersehenes Gerät bekommt keine. In anderen Netzen hinter einem Router gilt als Gerät, wer auf Ping antwortet
+   (Entscheidung des Nutzers, 01.11.2026) – kein zusätzliches Anklopfen an TCP-Ports.
 
 ## Später
 
