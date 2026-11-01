@@ -30,16 +30,17 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build: ${{ steps.check.outputs.build }}
+      docs: ${{ steps.check.outputs.docs }}
       version: ${{ steps.check.outputs.version }}
       architectures: ${{ steps.check.outputs.architectures }}
       first: ${{ steps.check.outputs.first }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      # Builds when there is no release for this version yet, or when it lacks a file - the package of an
-      # architecture added to packaging/architectures later, or an accompanying document; the release is then
-      # completed.
-      - name: Is the release for this version complete?
+      # The packages are built when there is no release for this version yet or when it lacks one (an architecture
+      # added to packaging/architectures later). The accompanying documents are compared with the release and
+      # uploaded alone when one is missing or has changed - without building anything.
+      - name: Is the release for this version complete and up to date?
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -50,21 +51,32 @@ jobs:
           echo "architectures=$(printf '%s\n' $archs | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().split()))')" >> "$GITHUB_OUTPUT"
           echo "first=$(printf '%s\n' $archs | head -1)" >> "$GITHUB_OUTPUT"
           build=false
+          docs=false
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             build=true
+            docs=true
           elif ! assets=$(gh release view "v$version" --json assets -q '.assets[].name' 2>/dev/null); then
             echo "No release v$version yet."
             build=true
+            docs=true
           else
-            for file in $(for a in $archs; do echo "mynetworkmonitor-scan_${version}_${a}.apk"; done) \
-                        ANLEITUNG.txt GERAETE.html LICENSE THIRD-PARTY-NOTICES.md SHA256SUMS; do
+            for file in $(for a in $archs; do echo "mynetworkmonitor-scan_${version}_${a}.apk"; done) SHA256SUMS; do
               if ! printf '%s\n' "$assets" | grep -qx "$file"; then
                 echo "Release v$version lacks $file."
                 build=true
               fi
             done
+            for doc in packaging/ANLEITUNG.txt packaging/GERAETE.html LICENSE THIRD-PARTY-NOTICES.md; do
+              name=$(basename "$doc")
+              published=$(gh release download "v$version" -p "$name" -O - 2>/dev/null | sha256sum | cut -d' ' -f1)
+              if [ "$published" != "$(sha256sum < "$doc" | cut -d' ' -f1)" ]; then
+                echo "Release v$version: $name missing or changed."
+                docs=true
+              fi
+            done
           fi
           echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "docs=$docs" >> "$GITHUB_OUTPUT"
 
   # No packages from a state whose tests fail.
   tests:
@@ -148,24 +160,31 @@ jobs:
           name: luci-app
           path: out/luci-app-mynetworkmonitor_*.apk
 
+  # After a build, or alone when only the documents are to be updated.
   release:
     needs: [check-version, build]
-    if: needs.check-version.outputs.build == 'true'
+    if: >-
+      always() && needs.check-version.result == 'success' &&
+      (needs.check-version.outputs.build == 'true' || needs.check-version.outputs.docs == 'true') &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - if: needs.check-version.outputs.build == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: dist
           merge-multiple: true
 
       - name: Instructions, licence and checksums
         run: |
+          mkdir -p dist
           cp packaging/ANLEITUNG.txt packaging/GERAETE.html LICENSE THIRD-PARTY-NOTICES.md dist/
-          cd dist && sha256sum *.apk > SHA256SUMS && ls -la
+          # checksums only with new packages; otherwise the published ones stay
+          cd dist && if ls *.apk > /dev/null 2>&1; then sha256sum *.apk > SHA256SUMS; fi; ls -la
 
       # The release text is the message of the commit that set this version (also when a later run only adds
       # architectures), up to a line of three dashes; a longer reasoning below it stays in the history only.

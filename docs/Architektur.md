@@ -286,7 +286,8 @@ Zeitlich geordnet, neue ans Ende.
   32 Bit, `aarch64_cortex-a72` für Pi 4, `aarch64_cortex-a76` für Pi 5) im offiziellen SDK-Container (`openwrt/sdk:<architektur>-25.12.6`) und legt
   ein Release mit allen Paketen an – einmal je Version in `VERSION`, wenn es dafür noch keins gibt, und ergänzt es,
   wenn später eine Architektur dazukommt (Text des Releases bleibt der des Versions-Commits); Beta-Versionen als
-  Vorabversion. Davor laufen die Tests (mbedTLS aus dem Quellarchiv, das auch das SDK nimmt, mit Prüfsumme).
+  Vorabversion. Begleitdateien (Anleitung, Geräteseite, Lizenz, Herkunftsangaben) werden mit dem Release verglichen
+  und bei Änderung allein hochgeladen, ohne Tests und Bau. Davor laufen die Tests (mbedTLS aus dem Quellarchiv, das auch das SDK nimmt, mit Prüfsumme).
 - **mbedTLS im SDK:** Es liegt in der Basis-Paketquelle von OpenWrt. Statt sie in jedem Bau ganz zu klonen, holt der
   Bau nur `package/libs/mbedtls` aus genau dem Commit, aus dem das SDK gebaut ist (aus `feeds.conf.default`).
 - **Dateinamen im Release:** `mynetworkmonitor-scan_<version>_<architektur>.apk` (die Pakete selbst heißen in allen
