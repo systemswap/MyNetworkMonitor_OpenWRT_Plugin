@@ -9,6 +9,7 @@
 			{ "id": "wsd", "name": "WS-Discovery", "hint": "Windows computers, printers, scanners", "available": false, "default": true }
 		] },
 		{ "id": "identify", "name": "Identifying devices", "icon": "🪪", "items": [
+			{ "id": "dnsnames", "name": "Names from DNS", "hint": "Reverse lookup at the router and the home router before it", "available": true, "default": true },
 			{ "id": "netbios", "name": "NetBIOS names", "hint": "Computer names in Windows and Samba networks", "available": false, "default": true },
 			{ "id": "webpage", "name": "Web page and certificate", "hint": "Title of the web interface, certificate issuer and expiry", "available": false, "default": true },
 			{ "id": "snmp", "name": "SNMP", "hint": "Name and description of printers, switches and NAS", "available": false, "default": true }

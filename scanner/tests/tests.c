@@ -6,6 +6,7 @@
  * beyond a C compiler is needed.
  */
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +15,7 @@
 #include <unistd.h>
 
 #include "../src/devices.h"
+#include "../src/dnsname.h"
 #include "../src/json.h"
 #include "../src/packets.h"
 #include "../src/probes.h"
@@ -380,6 +382,60 @@ static void test_devices_json(void)
 	mnm_devices_free(&devs);
 }
 
+static void test_dns_names(void)
+{
+	uint8_t q[64], a[256];
+	char name[64];
+
+	size_t n = mnm_ptr_query(ip("192.168.123.5"), 0x1234, q, sizeof(q));
+	CHECK(n == 12 + 28 + 4 && q[0] == 0x12 && q[1] == 0x34 && q[2] == 0x01);
+	CHECK(memcmp(q + 12, "\x01" "5" "\x03" "123" "\x03" "168" "\x03" "192" "\x07" "in-addr" "\x04" "arpa" "\x00", 28) == 0);
+	CHECK(q[n - 3] == 12);   /* type PTR */
+
+	/* answer: the question copied, then a PTR record whose name points back
+	 * into the question (compression) and whose data is "nas.home.arpa" */
+	memcpy(a, q, n);
+	a[2] = 0x81; a[3] = 0x80; a[7] = 1;                    /* response, no error, one answer */
+	size_t m = n;
+	const uint8_t rr[] = { 0xc0, 0x0c, 0, 12, 0, 1, 0, 0, 0, 10, 0, 15,
+			       3, 'n', 'a', 's', 4, 'h', 'o', 'm', 'e', 4, 'a', 'r', 'p', 'a', 0 };
+	memcpy(a + m, rr, sizeof(rr));
+	m += sizeof(rr);
+	CHECK(mnm_ptr_answer(a, m, 0x1234, name, sizeof(name)) == 1 && strcmp(name, "nas.home.arpa") == 0);
+	CHECK(mnm_ptr_answer(a, m, 0x1235, name, sizeof(name)) == 0);     /* other ID */
+	a[3] = 0x83;                                                      /* NXDOMAIN */
+	CHECK(mnm_ptr_answer(a, m, 0x1234, name, sizeof(name)) == 0);
+	a[3] = 0x80;
+	/* a compression pointer that points at itself must not loop */
+	a[m - 15] = 0xc0; a[m - 14] = (uint8_t)(m - 15);
+	mnm_ptr_answer(a, m, 0x1234, name, sizeof(name));
+	/* damaged answers: every cut-off length, no reading beyond */
+	for (size_t cut = 0; cut < m; cut++)
+		mnm_ptr_answer(a, cut, 0x1234, name, sizeof(name));
+
+	/* the default gateway from a route table: the default route of the WAN side,
+	 * not the local network without gateway; addresses as the kernel prints them
+	 * (network byte order read as a native number, on this build machine) */
+	char path[] = "/tmp/mnm-route-XXXXXX";
+	int fd = mkstemp(path);
+	CHECK(fd >= 0);
+	if (fd >= 0) {
+		uint32_t gw = htonl(ip("192.168.1.1")), net = htonl(ip("10.0.0.0"));
+		dprintf(fd, "Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT\n");
+		dprintf(fd, "br-lan\t%08X\t00000000\t0001\t0\t0\t0\t00FFFFFF\t0\t0\t0\n", net);
+		dprintf(fd, "wan\t00000000\t%08X\t0003\t0\t0\t0\t00000000\t0\t0\t0\n", gw);
+		close(fd);
+		CHECK(mnm_default_gateway(path) == ip("192.168.1.1"));
+		fd = open(path, O_WRONLY | O_TRUNC);
+		dprintf(fd, "Iface\tDestination\tGateway \tFlags\n");
+		dprintf(fd, "br-lan\t%08X\t00000000\t0001\t0\t0\t0\t00FFFFFF\t0\t0\t0\n", net);
+		close(fd);
+		CHECK(mnm_default_gateway(path) == 0);
+		unlink(path);
+	}
+	CHECK(mnm_default_gateway("/nonexistent/route") == 0);
+}
+
 static int ident(const char *id, const void *answer, size_t len)
 {
 	const struct mnm_probe *p = mnm_probe_find(id);
@@ -487,6 +543,7 @@ int main(void)
 	test_vendors();
 	test_devices_json();
 	test_probes();
+	test_dns_names();
 	printf("%d checks, %d failed\n", checks, failures);
 	return failures ? 1 : 0;
 }

@@ -76,8 +76,12 @@ const STYLE = `
 .mnm-group-body label { display:block; margin:.15em 0; cursor:pointer; }
 `;
 
+// The host name without its domain ("nas.home.arpa" -> "nas"), else the address;
+// the vendor has a column of its own. The full name is in the details.
 function displayName(d) {
-	return d.hostname || d.vendor || d.ipv4 || '?';
+	if (d.hostname)
+		return d.hostname.split('.')[0] || d.hostname;
+	return d.ipv4 || '?';
 }
 
 function ago(seconds) {

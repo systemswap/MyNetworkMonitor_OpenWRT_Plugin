@@ -27,6 +27,11 @@ struct mnm_probe {
 	/* Optional: what the answer tells about the device (software, version),
 	 * written to detail; returns 1 if something was written. */
 	int (*describe)(const uint8_t *answer, size_t len, char *detail, size_t detail_len);
+	/* Instead of hello and identify: a procedure of its own (several steps, or
+	 * UDP). Talks to address:port with each step limited to timeout_ms and
+	 * returns 1 if the service was recognised, with an optional detail. Runs
+	 * in a worker thread, so it may block within its time limits. */
+	int (*run)(uint32_t address, uint16_t port, int timeout_ms, char *detail, size_t detail_len);
 };
 
 /* The probe with this catalog id, or NULL. */

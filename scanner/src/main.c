@@ -22,6 +22,7 @@
 
 #include "devices.h"
 #include "discover.h"
+#include "dnsname.h"
 #include "json.h"
 #include "probe_engine.h"
 #include "ports.h"
@@ -196,6 +197,7 @@ static void usage(FILE *out)
 	      "  --timeout-ms N      time to wait for answers (50-10000, default 800)\n"
 	      "  --parallel N        TCP connections at the same time (1-256, default 64)\n"
 	      "  --no-ping           find devices by ARP and the neighbour table only\n"
+	      "  --names             look up device names by reverse DNS\n"
 	      "  --probe ID=PORTS    recognise a service on these ports by its answer, e.g. ssh=22 (repeatable)\n"
 	      "  --allow-public      also scan addresses outside the private ranges\n"
 	      "  --version           print the version\n",
@@ -228,6 +230,7 @@ int main(int argc, char **argv)
 		{ "allow-public", no_argument, NULL, 'P' },
 		{ "no-ping", no_argument, NULL, 'N' },
 		{ "probe", required_argument, NULL, 'b' },
+		{ "names", no_argument, NULL, 'n' },
 		{ "version", no_argument, NULL, 'V' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 },
@@ -238,7 +241,7 @@ int main(int argc, char **argv)
 	struct mnm_ports ports = { 0 };
 	struct mnm_tcpscan_options tcp = { .parallel = 64, .timeout_ms = 800 };
 	char err[200];
-	int allow_public = 0, ping = 1;
+	int allow_public = 0, ping = 1, names = 0;
 	struct probe_map maps[MAX_PROBE_MAPS];
 	size_t map_count = 0;
 	int c;
@@ -264,6 +267,7 @@ int main(int argc, char **argv)
 			break;
 		case 'P': allow_public = 1; break;
 		case 'N': ping = 0; break;
+		case 'n': names = 1; break;
 		case 'b':
 			if (map_count == MAX_PROBE_MAPS || parse_probe_map(optarg, &maps[map_count], err, sizeof(err)) != 0) {
 				fprintf(stderr, "--probe: %s\n", map_count == MAX_PROBE_MAPS ? "too many" : err);
@@ -320,6 +324,33 @@ int main(int argc, char **argv)
 	mnm_discover_leases(leases, &scan.devices);
 	mnm_discover_vendors(vendors, &scan.devices);
 	write_output(&scan);
+
+	/* Names by reverse DNS: first the router's own name server (dnsmasq knows the
+	 * devices it handed addresses to), then for the rest the name server it asks
+	 * itself and the default gateway - in a home network behind another router
+	 * one of them usually knows the names of the devices there; the name server
+	 * handed out by DHCP may also be a filter or cache that knows none. dnsmasq
+	 * does not pass reverse queries for private addresses on by itself (OpenWrt
+	 * option boguspriv). Further servers are asked only if their address is
+	 * private: names of the own devices never go to a server on the internet. */
+	if (names && !interrupted) {
+		uint32_t servers[3] = {
+			mnm_resolver("/etc/resolv.conf"),
+			mnm_resolver("/tmp/resolv.conf.d/resolv.conf.auto"),
+			mnm_default_gateway("/proc/net/route"),
+		};
+		for (size_t i = 0; i < 3 && !stop_requested; i++) {
+			struct mnm_targets single = { &(struct mnm_range){ servers[i], servers[i] }, 1, 1 };
+			int repeated = 0;
+			for (size_t k = 0; k < i; k++)
+				repeated |= servers[k] == servers[i];
+			if (servers[i] == 0 || repeated ||
+			    (i > 0 && (servers[i] >> 24 == 127 || !mnm_targets_all_private(&single, NULL, 0))))
+				continue;
+			mnm_discover_dns_names(&scan.devices, servers[i], 1500, &stop_requested);
+		}
+		write_output(&scan);
+	}
 
 	/* Phase 2: the TCP ports of every device found. */
 	int status = 0;

@@ -22,7 +22,7 @@ WARN    := -std=c11 -D_DEFAULT_SOURCE -Wall -Wextra -Wshadow -Wconversion -Wno-s
 DEFS    := -DMNM_VERSION='"$(VERSION)"'
 
 LIBSRC  := src/targets.c src/ports.c src/json.c src/tcpscan.c src/packets.c src/textdata.c src/devices.c \
-           src/discover.c src/probes.c src/probe_engine.c
+           src/discover.c src/probes.c src/probe_engine.c src/netio.c src/dnsname.c
 SRC     := src/main.c $(LIBSRC)
 
 .PHONY: all test clean
@@ -31,12 +31,12 @@ all: $(BUILD)/mynetworkmonitor-scan
 
 $(BUILD)/mynetworkmonitor-scan: $(SRC) src/*.h $(wildcard ../VERSION)
 	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) $(WARN) $(DEFS) $(SRC) -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(WARN) $(DEFS) $(SRC) -o $@ $(LDFLAGS) -pthread
 
 $(BUILD)/tests: tests/tests.c $(LIBSRC) src/*.h
 	@mkdir -p $(BUILD)
 	$(CC) -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer $(WARN) $(DEFS) \
-	      tests/tests.c $(LIBSRC) -o $@
+	      tests/tests.c $(LIBSRC) -o $@ -pthread
 
 test: $(BUILD)/tests
 	$(BUILD)/tests

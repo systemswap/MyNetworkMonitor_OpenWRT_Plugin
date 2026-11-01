@@ -2,6 +2,7 @@
 #include "probe_engine.h"
 
 #include <arpa/inet.h>
+#include <pthread.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <poll.h>
@@ -83,10 +84,107 @@ static void finish(struct slot *s, const struct mnm_probe_job *job, const struct
 	s->state = FREE;
 }
 
+/* ------------------------------------------------ probes with own procedure */
+
+/* Workers for probes with several steps: each takes the next job and runs the
+ * probe's procedure, which blocks within its own time limits. A few threads
+ * are enough to keep many devices busy; their stacks are kept small for routers. */
+#define WORKERS_MAX 16
+#define WORKER_STACK (128 * 1024)
+
+struct workshop {
+	const struct mnm_probe_job *jobs;
+	const size_t *list;        /* indices of the jobs with own procedure */
+	size_t count, next, done, done_before, total;
+	const struct mnm_probe_options *o;
+	pthread_mutex_t lock;
+};
+
+static void *worker(void *arg)
+{
+	struct workshop *w = arg;
+	for (;;) {
+		pthread_mutex_lock(&w->lock);
+		if (w->next >= w->count || (w->o->stop && *w->o->stop)) {
+			pthread_mutex_unlock(&w->lock);
+			return NULL;
+		}
+		const struct mnm_probe_job *job = &w->jobs[w->list[w->next++]];
+		pthread_mutex_unlock(&w->lock);
+
+		char detail[MNM_DETAIL_LEN] = "";
+		int found = job->probe->run(job->address, job->port, w->o->timeout_ms, detail, sizeof(detail));
+
+		/* The callbacks change the device list and write files: one at a time. */
+		pthread_mutex_lock(&w->lock);
+		if (found && w->o->on_found)
+			w->o->on_found(w->o->context, job->address, job->port, job->probe, detail);
+		w->done++;
+		if (w->o->on_progress)
+			w->o->on_progress(w->o->context, w->done_before + w->done, w->total);
+		pthread_mutex_unlock(&w->lock);
+	}
+}
+
+static int run_own_procedures(struct workshop *w, int parallel)
+{
+	pthread_t threads[WORKERS_MAX];
+	pthread_attr_t attr;
+	int n = parallel < WORKERS_MAX ? parallel : WORKERS_MAX, started = 0;
+
+	if (w->count == 0)
+		return 0;
+	pthread_mutex_init(&w->lock, NULL);
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, WORKER_STACK);
+	for (int i = 0; i < n && (size_t)i < w->count; i++)
+		if (pthread_create(&threads[started], &attr, worker, w) == 0)
+			started++;
+	pthread_attr_destroy(&attr);
+	if (started == 0)
+		worker(w);   /* no thread could be started: do the work here */
+	for (int i = 0; i < started; i++)
+		pthread_join(threads[i], NULL);
+	pthread_mutex_destroy(&w->lock);
+	return 0;
+}
+
+/* -------------------------------------------- probes with one greeting */
+
+static int run_greetings(const struct mnm_probe_job *all, const size_t *list, size_t count, size_t done_before,
+			 size_t total, const struct mnm_probe_options *o);
+
 int mnm_probe_run(const struct mnm_probe_job *jobs, size_t count, const struct mnm_probe_options *o)
 {
+	if (count == 0)
+		return 0;
+	size_t *own = malloc(count * sizeof(*own)), *greet = malloc(count * sizeof(*greet));
+	size_t n_own = 0, n_greet = 0;
+	if (!own || !greet) {
+		free(own);
+		free(greet);
+		return -1;
+	}
+	for (size_t i = 0; i < count; i++) {
+		if (jobs[i].probe->run)
+			own[n_own++] = i;
+		else
+			greet[n_greet++] = i;
+	}
 	int parallel = o->parallel < 1 ? 1 : o->parallel > 256 ? 256 : o->parallel;
-	size_t next = 0, done = 0;
+	struct workshop w = { .jobs = jobs, .list = own, .count = n_own, .total = count, .o = o };
+	run_own_procedures(&w, parallel);
+	int outcome = (o->stop && *o->stop) ? 1 : run_greetings(jobs, greet, n_greet, n_own, count, o);
+	free(own);
+	free(greet);
+	return outcome;
+}
+
+static int run_greetings(const struct mnm_probe_job *all, const size_t *list, size_t count, size_t done_before,
+			 size_t total, const struct mnm_probe_options *o)
+{
+	int parallel = o->parallel < 1 ? 1 : o->parallel > 256 ? 256 : o->parallel;
+	size_t next = 0, done = done_before;
 	int stopped = 0;
 
 	if (count == 0)
@@ -114,16 +212,16 @@ int mnm_probe_run(const struct mnm_probe_job *jobs, size_t count, const struct m
 		int out_of_sockets = 0;
 		for (int i = 0; i < parallel && !stopped && !out_of_sockets; i++) {
 			while (slots[i].state == FREE && next < count) {
-				int fd = start_connect(jobs[next].address, jobs[next].port);
+				int fd = start_connect(all[list[next]].address, all[list[next]].port);
 				if (fd == -2) {
 					out_of_sockets = 1;
 					break;
 				}
-				size_t job = next++;
+				size_t job = list[next++];
 				if (fd < 0) {
 					done++;
 					if (o->on_progress)
-						o->on_progress(o->context, done, count);
+						o->on_progress(o->context, done, total);
 					continue;
 				}
 				struct slot *s = &slots[i];
@@ -133,10 +231,10 @@ int mnm_probe_run(const struct mnm_probe_job *jobs, size_t count, const struct m
 				s->deadline = now_ms() + o->timeout_ms;
 				s->sent = 0;
 				s->len = 0;
-				const struct mnm_probe *p = jobs[job].probe;
+				const struct mnm_probe *p = all[job].probe;
 				if (p->build) {
 					s->hello = s->built;
-					s->hello_len = p->build(jobs[job].address, s->built, sizeof(s->built));
+					s->hello_len = p->build(all[job].address, s->built, sizeof(s->built));
 				} else {
 					s->hello = p->hello;
 					s->hello_len = p->hello ? p->hello_len : 0;
@@ -169,7 +267,7 @@ int mnm_probe_run(const struct mnm_probe_job *jobs, size_t count, const struct m
 		now = now_ms();
 		for (int k = 0; k < active; k++) {
 			struct slot *s = &slots[index_of[k]];
-			const struct mnm_probe_job *job = &jobs[s->job];
+			const struct mnm_probe_job *job = &all[s->job];
 			int over = 0;
 
 			if (s->state == CONNECTING && (pfds[k].revents & (POLLOUT | POLLERR | POLLHUP))) {
@@ -204,7 +302,7 @@ int mnm_probe_run(const struct mnm_probe_job *jobs, size_t count, const struct m
 				finish(s, job, o);
 				done++;
 				if (o->on_progress)
-					o->on_progress(o->context, done, count);
+					o->on_progress(o->context, done, total);
 			}
 		}
 	}

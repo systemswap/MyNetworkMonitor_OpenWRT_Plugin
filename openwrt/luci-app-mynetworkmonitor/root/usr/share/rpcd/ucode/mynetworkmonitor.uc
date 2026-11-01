@@ -417,6 +417,8 @@ const methods = {
 				scan += ' --ports ' + shell_quote(ports);
 			if (index(services, 'ping') < 0)
 				scan += ' --no-ping';
+			if (index(services, 'dnsnames') >= 0)
+				scan += ' --names';
 			for (let p in probes)
 				scan += ' --probe ' + shell_quote(p);
 			const vendors = store_dir() + '/manuf';

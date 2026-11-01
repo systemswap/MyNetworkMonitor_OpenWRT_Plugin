@@ -183,3 +183,29 @@ Regeln:
 - **Im Code:** `root/usr/share/rpcd/ucode/mynetworkmonitor.uc` (`status`), `htdocs/…/scan.js` (`renderTable`, `update`).
 - **Abgesichert durch:** `tests/ui/check_page.py`, auch während laufender Scans (im Hintergrund fortlaufend
   Einzelgerät-Scans eines Geräts, siehe `docs/PRUEFUNGEN.md`).
+
+## Nr. 12 – Seite/Scanprogramm: in der Spalte „Device“ stand der Hersteller statt des Gerätenamens
+
+- **Entdeckt:** 01.11.2026, Version 0.0.18-beta (Nutzer: „bei Device steht der Hersteller anstatt des Hostnamen“).
+  **Behoben:** 0.0.19-beta.
+- **Was und wo:** Bei Geräten ohne Namen zeigte die Tabelle den Hersteller, und Namen hatten fast nur Geräte, denen
+  der Router selbst eine Adresse gab. In einem Netz, in dem ein anderer Router die Adressen vergibt, stand damit fast
+  überall der Hersteller.
+- **Warum:** Das Scanprogramm kannte Namen nur aus den DHCP-Zuteilungen von dnsmasq; die Seite nahm ersatzweise den
+  Hersteller.
+- **Lösung:** Rückwärtsauflösung (PTR) für alle gefundenen Geräte, nacheinander beim eigenen Namensserver, beim
+  Namensserver des Routers und beim Standard-Gateway (nur private Adressen); die Seite zeigt den Namen ohne Domain,
+  sonst die Adresse. Warum diese Reihenfolge: `docs/Architektur.md`, „Gerätenamen über Rückwärtsauflösung“.
+- **Falle bei der Suche:** Im Testnetz verteilt DHCP als Namensserver einen Zwischenspeicher, der Rückwärtsfragen für
+  private Adressen mit NXDOMAIN beantwortet; erst der Router davor (das Gateway) kennt die Namen. Eine Abfrage aus der
+  VM sah deshalb so aus, als beantworte „der Router“ der VM die Frage anders als dem PC – gefragt war aber ein anderer
+  Server.
+- **Nicht tun:** den Namensserver aus DHCP für allwissend halten; bei Vergleichen immer ausdrücklich angeben, welcher
+  Server gefragt wird. Den Hersteller nicht als Gerätenamen ausgeben.
+- **Im Code:** `scanner/src/dnsname.c` (`mnm_ptr_query`, `mnm_ptr_answer`, `mnm_default_gateway`,
+  `mnm_discover_dns_names`), `scanner/src/main.c` (Namensphase), `htdocs/…/scan.js` (`displayName`), Katalogeintrag
+  `dnsnames` in `scanner/data/services.json`, Übernahme in bestehende Einstellungen in `uci-defaults` (Version 4).
+- **Abgesichert durch:** `scanner/tests/tests.c` (`test_dns_names`: Frage, Antwort mit Kompression, falsche Kennung,
+  NXDOMAIN, Zeigerschleife, jede abgeschnittene Länge, Standard-Gateway aus der Routentabelle); Test in der VM im
+  Heimnetz: alle Namen, die das Gateway kennt, kamen an.
+

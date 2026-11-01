@@ -104,3 +104,4 @@ nicht). Vorher prüfen, dass die Geräteliste nicht leer ist; sonst ein Gerät m
 | 01.11.2026 | 0.0.9-beta | Maustest bei 1920×1080 und 1366×768 ohne Befund; 129 Prüfungen grün |
 | 01.11.2026 | 0.0.13-beta | Stufe 3a: 16 Pakete identisch mit dem Desktop-Programm; 156 Prüfungen grün; im Heimnetz erkannt: SSH mit Version, HTTP mit Server, DNS, RDP mit Sicherheitsstufe, VNC mit Protokoll; Maustest ohne Befund |
 | 01.11.2026 | 0.0.18-beta | Maustest im Ruhezustand und während laufender Scans ohne Befund (beide Auflösungen) |
+| 01.11.2026 | 0.0.19-beta | 166 Prüfungen grün; Gerätenamen im Heimnetz (VM als Endgerät): alle Namen, die das Gateway kennt, gefunden – der Namensserver aus DHCP kannte keinen; Spalte „Device“ zeigt den Namen; Maustest ohne Befund |

@@ -23,7 +23,9 @@ warum es so gebaut ist. Bei jeder Struktur- oder Technikentscheidung aktualisier
    Zielliste zusammen und startet `mynetworkmonitor-scan` im Hintergrund. Läuft schon einer, lehnt es ab. „Scan this
    device“ scannt nur ein Gerät und lässt die gespeicherten Einstellungen unverändert.
 2. Das Scanprogramm sucht zuerst die Geräte (Nachbartabelle, DHCP-Zuteilungen, Herstellerliste, ARP in den eigenen
-   Netzen, Ping), dann ihre TCP-Ports, und schreibt `/tmp/mynetworkmonitor/scan.json` höchstens einmal je Sekunde neu.
+   Netzen, Ping), dann ihre Namen (Rückwärtsauflösung, wenn „Names from DNS“ gewählt ist), dann ihre TCP-Ports
+   und zuletzt die Dienste auf den offenen Ports, und schreibt `/tmp/mynetworkmonitor/scan.json` höchstens einmal je
+   Sekunde neu.
 3. Die Seite fragt jede Sekunde den Stand ab. Das Backend liefert die Geräteliste mit dem laufenden Scan
    hineingemischt (ohne zu speichern); ist der Scan beendet, mischt es ihn einmal fest in die Liste.
 
@@ -120,4 +122,23 @@ Zeitlich geordnet, neue ans Ende.
   damit erkannt). DNS über TCP fragt einmal statt bis zu dreimal.
 - **Prüfung:** ein lokales Skript vergleicht vor jedem Commit an `probes.c` jedes Array mit dem C#-Quellcode
   (`docs/PRUEFUNGEN.md`).
+- **Sonden mit mehreren Schritten** (eigene Prozedur `run` in `probes.c`) laufen vor den Sonden mit einem Gruß in
+  höchstens 16 Threads mit kleinem Stapel (128 KiB); jede wartet blockierend mit eigenen Zeitgrenzen (`netio.c`).
+  Fundmeldungen und Fortschritt laufen unter einer Sperre, weil sie die Geräteliste ändern und Dateien schreiben.
 
+### 01.11.2026 – Gerätenamen über Rückwärtsauflösung (DNS)
+
+- **Entschieden:** Die Spalte „Device“ zeigt den Namen des Geräts (ohne Domain), sonst seine Adresse – nie den
+  Hersteller, der hat eine eigene Spalte. Namen kommen aus den DHCP-Zuteilungen des Routers und, wenn der Dienst
+  „Names from DNS“ gewählt ist (ab Werk an), aus PTR-Abfragen.
+- **Welche Namensserver, in welcher Reihenfolge:** zuerst der eigene des Routers (`/etc/resolv.conf`, dnsmasq – ist
+  OpenWrt der Hauptrouter, kennt er alle Geräte, denen er Adressen gab), dann der, den der Router selbst benutzt
+  (`/tmp/resolv.conf.d/resolv.conf.auto`), dann das Standard-Gateway (`/proc/net/route`). Jeder wird nur nach den
+  Geräten gefragt, die noch keinen Namen haben. Der zweite und dritte sind nötig, weil dnsmasq Rückwärtsfragen für
+  private Adressen nicht weitergibt (Option `boguspriv`) und weil der Namensserver aus DHCP oft ein Filter oder
+  Zwischenspeicher ist, der die Geräte nicht kennt – der Router davor kennt sie dann meist.
+- **Datenschutz:** Der zweite und dritte Server wird nur gefragt, wenn seine Adresse privat ist; Fragen nach eigenen
+  Geräten gehen nie an einen Server im Internet.
+- **Verworfen:** `nslookup` je Gerät aufrufen – ein Prozess je Adresse und Ausgabe, die man zerlegen müsste; das
+  Scanprogramm schickt alle Fragen über einen UDP-Socket (höchstens 1000 je Sekunde) und ordnet die Antworten über
+  ihre Kennung zu. Geräte, die kein Namensserver kennt, bekommen Namen später über NetBIOS und mDNS.

@@ -26,6 +26,17 @@ if [ "$version" = "2" ]; then
 	uci -q get mynetworkmonitor.scan.extra_ports >/dev/null || uci set mynetworkmonitor.scan.extra_ports=''
 	uci set mynetworkmonitor.scan.version='3'
 	uci commit mynetworkmonitor
+	version=3
+fi
+
+# Format 4 adds "Names from DNS", on by default: a choice saved before it
+# existed gets it once.
+if [ "$version" = "3" ]; then
+	if [ "$(uci -q get mynetworkmonitor.scan.services_chosen)" = "1" ]; then
+		uci -q get mynetworkmonitor.scan.services | grep -qw dnsnames || uci add_list mynetworkmonitor.scan.services='dnsnames'
+	fi
+	uci set mynetworkmonitor.scan.version='4'
+	uci commit mynetworkmonitor
 fi
 
 # No choice of services yet (new installation, or format 2 above): take the
