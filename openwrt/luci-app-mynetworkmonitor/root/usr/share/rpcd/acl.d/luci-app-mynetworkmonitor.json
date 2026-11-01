@@ -1,0 +1,17 @@
+{
+	"luci-app-mynetworkmonitor": {
+		"description": "Grant access to the MyNetworkMonitor network scanner",
+		"read": {
+			"ubus": {
+				"luci.mynetworkmonitor": [ "status", "result" ]
+			},
+			"uci": [ "mynetworkmonitor" ]
+		},
+		"write": {
+			"ubus": {
+				"luci.mynetworkmonitor": [ "start", "stop" ]
+			},
+			"uci": [ "mynetworkmonitor" ]
+		}
+	}
+}

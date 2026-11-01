@@ -1,0 +1,14 @@
+{
+	"admin/network/mynetworkmonitor": {
+		"title": "MyNetworkMonitor",
+		"order": 90,
+		"action": {
+			"type": "view",
+			"path": "mynetworkmonitor/scan"
+		},
+		"depends": {
+			"acl": [ "luci-app-mynetworkmonitor" ],
+			"uci": { "mynetworkmonitor": true }
+		}
+	}
+}
