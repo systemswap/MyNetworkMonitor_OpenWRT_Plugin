@@ -11,7 +11,7 @@ warum es so gebaut ist. Bei jeder Struktur- oder Technikentscheidung aktualisier
 | Verfahren | `scanner/src/methods/` | je Verfahren eine Datei (TCP-Ports, Dienst-Sonden, SSDP, NetBIOS, SNMP, ONVIF, SMB, Zertifikate) | Netzschicht, Auswertung |
 | Auswertung | `scanner/src/parse/` | reine Funktionen: Antwort rein, Befund raus – ohne Netz, auf dem PC testbar | nur eigene Typen |
 | Netzschicht | `scanner/src/net/` | Sockets ohne Blockieren, Zeitgrenzen, Begrenzung gleichzeitiger Verbindungen | libc |
-| Erkennungspakete | `scanner/data/probes.json` | je Dienst Ports, Hello-Bytefolge, Art der Antwortprüfung | – |
+| Dienstekatalog | `scanner/data/services.json` → `/usr/share/mynetworkmonitor/services.json` | Gruppen, Dienste und Verfahren mit Ports, Vorauswahl (`default`), geplant/gebaut (`available`); später auch die Erkennungspakete | – |
 | Backend für LuCI | `openwrt/luci-app-mynetworkmonitor/root/usr/share/rpcd/ucode/` | startet und stoppt das Scanprogramm, liefert Stand und Ergebnis | rpcd, UCI |
 | Seite in LuCI | `openwrt/luci-app-mynetworkmonitor/htdocs/` | Einstellungen, Start/Stopp, Ergebnistabelle | rpcd-Aufrufe |
 | Pakete | `openwrt/` | eine Paketquelle für das SDK von OpenWrt: je Paket ein Makefile (Ausgabe apk) | – |
@@ -96,4 +96,14 @@ Zeitlich geordnet, neue ans Ende.
   hebt das auf, die Seite bietet es nicht an (Wunsch des Nutzers: nur das Heimnetz scannen).
 - **Warum:** Ein Tippfehler im Bereich soll nie Rechner im Internet treffen. Das Internet bleibt für andere
   Funktionen erreichbar (z. B. Herstellerliste laden) – gesperrt ist nur das Scannen.
+
+### 01.11.2026 – Dienste in Gruppen wählen
+
+- **Entschieden:** Statt einer Portliste wählt man Dienste und Verfahren in Gruppen wie im Desktop-Programm (Geräte
+  finden, Geräte erkennen, Netzwerk-Dienste, Fernwartung, Dateidienste, Kameras, SQL, NoSQL, Industrie), dazu
+  „Additional ports“. Probiert werden nur die Ports der angehakten Dienste. Ab Werk sind SQL, NoSQL und Industrie aus
+  (Wunsch des Nutzers: im Heimnetz nichts suchen, was dort nicht vorkommt).
+- **Eine Stelle:** Katalog und Vorauswahl stehen nur in `services.json`; das Backend rechnet daraus die Ports, das
+  Skript `uci-defaults/90-luci-mynetworkmonitor` liest die Vorauswahl mit `jsonfilter`. `services_chosen` merkt sich,
+  dass eine Auswahl gespeichert wurde – auch eine leere bleibt leer.
 

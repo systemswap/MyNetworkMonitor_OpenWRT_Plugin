@@ -254,7 +254,7 @@ int mnm_discover_arp_ping(const struct mnm_targets *targets, struct mnm_devices 
 		if (overlaps && arp_network(&nets[i], targets, devices, options))
 			return 1;
 	}
-	return ping_all(targets, devices, options);
+	return options->ping ? ping_all(targets, devices, options) : 0;
 }
 
 /* ------------------------------------------------------ neighbour table */

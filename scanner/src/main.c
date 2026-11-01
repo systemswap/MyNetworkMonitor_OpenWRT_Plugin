@@ -148,6 +148,7 @@ static void usage(FILE *out)
 	      "  --vendors FILE      MAC vendor list in the \"manuf\" format\n"
 	      "  --timeout-ms N      time to wait for answers (50-10000, default 800)\n"
 	      "  --parallel N        TCP connections at the same time (1-256, default 64)\n"
+	      "  --no-ping           find devices by ARP and the neighbour table only\n"
 	      "  --allow-public      also scan addresses outside the private ranges\n"
 	      "  --version           print the version\n",
 	      out);
@@ -177,6 +178,7 @@ int main(int argc, char **argv)
 		{ "timeout-ms", required_argument, NULL, 'w' },
 		{ "parallel", required_argument, NULL, 'j' },
 		{ "allow-public", no_argument, NULL, 'P' },
+		{ "no-ping", no_argument, NULL, 'N' },
 		{ "version", no_argument, NULL, 'V' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 },
@@ -187,7 +189,7 @@ int main(int argc, char **argv)
 	struct mnm_ports ports = { 0 };
 	struct mnm_tcpscan_options tcp = { .parallel = 64, .timeout_ms = 800 };
 	char err[200];
-	int allow_public = 0;
+	int allow_public = 0, ping = 1;
 	int c;
 
 	while ((c = getopt_long(argc, argv, "", long_options, NULL)) != -1) {
@@ -210,6 +212,7 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'P': allow_public = 1; break;
+		case 'N': ping = 0; break;
 		case 'V': puts(MNM_VERSION); return 0;
 		case 'h': usage(stdout); return 0;
 		default: usage(stderr); return 2;
@@ -247,7 +250,7 @@ int main(int argc, char **argv)
 	/* Phase 1: find the devices. The neighbour table and the leases are read
 	 * first (instant results), then once more after ARP and ping, which fill
 	 * the neighbour table with the devices that just answered. */
-	struct mnm_discover_options d = { .timeout_ms = tcp.timeout_ms, .stop = &stop_requested,
+	struct mnm_discover_options d = { .timeout_ms = tcp.timeout_ms, .ping = ping, .stop = &stop_requested,
 					  .on_change = on_discover_change, .context = &scan };
 	mnm_discover_neighbors(&targets, &scan.devices);
 	mnm_discover_leases(leases, &scan.devices);

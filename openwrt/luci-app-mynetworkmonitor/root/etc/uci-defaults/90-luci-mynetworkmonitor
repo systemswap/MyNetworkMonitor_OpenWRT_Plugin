@@ -17,6 +17,26 @@ if [ "$version" = "1" ]; then
 	uci -q get mynetworkmonitor.scan.persist >/dev/null || uci set mynetworkmonitor.scan.persist='0'
 	uci set mynetworkmonitor.scan.version='2'
 	uci commit mynetworkmonitor
+	version=2
+fi
+
+# Format 3 chooses services in groups instead of one port list.
+if [ "$version" = "2" ]; then
+	uci -q delete mynetworkmonitor.scan.ports
+	uci -q get mynetworkmonitor.scan.extra_ports >/dev/null || uci set mynetworkmonitor.scan.extra_ports=''
+	uci set mynetworkmonitor.scan.version='3'
+	uci commit mynetworkmonitor
+fi
+
+# No choice of services yet (new installation, or format 2 above): take the
+# defaults from the catalog, the only place where they are written down.
+# "services_chosen" is set once the user saved a choice - also an empty one,
+# which must stay empty.
+if [ "$(uci -q get mynetworkmonitor.scan.services_chosen)" != "1" ] && ! uci -q get mynetworkmonitor.scan.services >/dev/null; then
+	for s in $(jsonfilter -i /usr/share/mynetworkmonitor/services.json -e '@.groups[*].items[@.default=true].id'); do
+		uci add_list mynetworkmonitor.scan.services="$s"
+	done
+	uci commit mynetworkmonitor
 fi
 
 exit 0

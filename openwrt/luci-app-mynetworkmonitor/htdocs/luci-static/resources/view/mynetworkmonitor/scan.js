@@ -18,8 +18,9 @@
 
 const callStatus = rpc.declare({ object: 'luci.mynetworkmonitor', method: 'status' });
 const callNetworks = rpc.declare({ object: 'luci.mynetworkmonitor', method: 'networks', expect: { networks: [] } });
+const callCatalog = rpc.declare({ object: 'luci.mynetworkmonitor', method: 'catalog' });
 const callStart = rpc.declare({ object: 'luci.mynetworkmonitor', method: 'start',
-	params: [ 'networks', 'ranges', 'ports', 'timeout_ms', 'parallel', 'target' ] });
+	params: [ 'networks', 'ranges', 'services', 'extra_ports', 'timeout_ms', 'parallel', 'target' ] });
 const callStop = rpc.declare({ object: 'luci.mynetworkmonitor', method: 'stop' });
 const callClear = rpc.declare({ object: 'luci.mynetworkmonitor', method: 'clear' });
 const callUpdateVendors = rpc.declare({ object: 'luci.mynetworkmonitor', method: 'update_vendors' });
@@ -34,10 +35,18 @@ const SERVICES = {
 };
 
 const STYLE = `
+/* The theme keeps the content to a fixed width; the table needs the whole window. */
+#maincontent, #maincontent.container, .main .container { max-width:none !important; width:auto !important; }
 .mnm-main { display:flex; gap:1em; align-items:flex-start; }
-.mnm-table { flex:3; min-width:0; overflow-x:auto; }
-.mnm-details { flex:2; min-width:260px; position:sticky; top:1em; }
-@media (max-width: 1000px) { .mnm-main { flex-direction:column; } .mnm-details { position:static; width:100%; } }
+.mnm-table { flex:1 1 auto; min-width:0; overflow-x:auto; }
+.mnm-details { flex:0 0 340px; position:sticky; top:1em; }
+@media (max-width: 1100px) { .mnm-main { flex-direction:column; } .mnm-details { position:static; width:100%; flex-basis:auto; } }
+.mnm-table td { white-space:nowrap; }
+.mnm-groups { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:.6em; }
+.mnm-group { border:1px solid rgba(128,128,128,.3); border-radius:4px; padding:.4em .6em; }
+.mnm-group summary { cursor:pointer; }
+.mnm-group label { display:block; margin:.2em 0 .2em 1.4em; }
+.mnm-group label.mnm-off { opacity:.5; }
 .mnm-table table { width:100%; }
 .mnm-table tr.mnm-row { cursor:pointer; }
 .mnm-table tr.mnm-row.selected td { background:rgba(11,124,139,.15); }
@@ -76,6 +85,15 @@ function serviceChips(d) {
 	return (d.tcp || []).map(p => E('span', { 'class': 'mnm-chip' }, SERVICES[p] || String(p)));
 }
 
+// Long IPv6 addresses shortened for the table: the prefix and the last block.
+// The full address is in the tooltip and the details.
+function shortV6(a) {
+	if (a.length <= 22)
+		return a;
+	const parts = a.split(':');
+	return parts.slice(0, 2).join(':') + ':…:' + parts[parts.length - 1];
+}
+
 // Compares IPv4 addresses numerically, so that .10 comes after .9.
 function ipOrder(a, b) {
 	const x = (a.ipv4 || '').split('.').map(Number), y = (b.ipv4 || '').split('.').map(Number);
@@ -94,7 +112,7 @@ return view.extend({
 	},
 
 	load() {
-		return Promise.all([ callStatus(), callNetworks(), uci.load('mynetworkmonitor') ]);
+		return Promise.all([ callStatus(), callNetworks(), callCatalog(), uci.load('mynetworkmonitor') ]);
 	},
 
 	// ------------------------------------------------------------ settings
@@ -130,9 +148,16 @@ return view.extend({
 			field('mnm-ranges', _('Own ranges'),
 				_('Optional, separated by commas - for example 192.168.5.0/24 or 192.168.5.1-50. Only private networks are scanned (10.x, 172.16-31.x, 192.168.x), never addresses on the internet.'),
 				value('ranges', '')),
-			field('mnm-ports', _('TCP ports'),
-				_('Tried on every device found. Empty: only find devices. More ports find more services but take longer.'),
-				value('ports', '')),
+			E('div', { 'class': 'cbi-value' }, [
+				E('label', { 'class': 'cbi-value-title' }, _('What to look for')),
+				E('div', { 'class': 'cbi-value-field' }, [
+					this.renderCatalog(),
+					E('div', { 'class': 'cbi-value-description' },
+						_('Only the ports of the ticked services are tried on the devices found. Greyed entries are planned and not built yet.'))
+				])
+			]),
+			field('mnm-extra-ports', _('Additional ports'),
+				_('Optional TCP ports and ranges, separated by commas, e.g. 8123,9000-9010.'), value('extra_ports', '')),
 			field('mnm-timeout', _('Timeout (ms)'),
 				_('How long to wait for an answer. Low values are faster but miss slow or distant devices.'),
 				value('timeout_ms', '800')),
@@ -159,6 +184,57 @@ return view.extend({
 		]);
 	},
 
+	// The catalog as one box per group: a tick for the whole group with a count,
+	// unfolded the single services with their ports.
+	renderCatalog() {
+		const chosen = L.toArray(uci.get('mynetworkmonitor', 'scan', 'services'));
+		const boxes = (this.catalog.groups || []).map(g => {
+			const items = g.items.map(item => {
+				const off = item.available === false;
+				const ports = (item.tcp || []).join(', ');
+				return E('label', { 'class': off ? 'mnm-off' : '' }, [
+					E('input', { 'type': 'checkbox', 'class': 'mnm-svc', 'value': item.id, 'data-group': g.id,
+						'checked': chosen.indexOf(item.id) >= 0 ? '' : null, 'disabled': off ? '' : null,
+						'change': () => this.updateGroupBoxes() }),
+					' ', item.name,
+					ports ? E('span', { 'class': 'mnm-sub' }, ' · ' + ports) : '',
+					item.hint ? E('span', { 'class': 'mnm-sub' }, ' · ' + item.hint) : '',
+					off ? E('span', { 'class': 'mnm-sub' }, ' · ' + _('coming')) : ''
+				]);
+			});
+			return E('details', { 'class': 'mnm-group' }, [
+				E('summary', {}, [
+					E('input', { 'type': 'checkbox', 'class': 'mnm-group-box', 'data-group': g.id,
+						'click': ev => ev.stopPropagation(),
+						'change': ev => {
+							document.querySelectorAll('.mnm-svc[data-group="%s"]:not([disabled])'.format(g.id))
+								.forEach(c => c.checked = ev.target.checked);
+							this.updateGroupBoxes();
+						} }),
+					' ', (g.icon || '') + ' ', E('strong', {}, g.name), ' ',
+					E('span', { 'class': 'mnm-sub mnm-count', 'data-group': g.id })
+				]),
+				...items
+			]);
+		});
+		requestAnimationFrame(() => this.updateGroupBoxes());
+		return E('div', { 'class': 'mnm-groups' }, boxes);
+	},
+
+	// Group tick: on when all its services are on, half when some are.
+	updateGroupBoxes() {
+		document.querySelectorAll('.mnm-group-box').forEach(box => {
+			const all = document.querySelectorAll('.mnm-svc[data-group="%s"]:not([disabled])'.format(box.dataset.group));
+			const on = Array.prototype.filter.call(all, c => c.checked).length;
+			box.checked = all.length > 0 && on == all.length;
+			box.indeterminate = on > 0 && on < all.length;
+			box.disabled = all.length == 0;
+			const count = document.querySelector('.mnm-count[data-group="%s"]'.format(box.dataset.group));
+			if (count)
+				count.textContent = _('%d of %d').format(on, all.length);
+		});
+	},
+
 	vendorText(v) {
 		if (!v) return '';
 		if (v.updating) return _('Downloading...');
@@ -167,8 +243,10 @@ return view.extend({
 
 	formValues() {
 		const nets = Array.prototype.map.call(document.querySelectorAll('.mnm-net:checked'), n => n.value);
+		// Planned entries keep their tick: they count as soon as they are built.
+		const services = Array.prototype.map.call(document.querySelectorAll('.mnm-svc:checked'), n => n.value);
 		const val = id => (document.getElementById(id)?.value || '').trim();
-		return [ nets, val('mnm-ranges'), val('mnm-ports'), val('mnm-timeout') || '800', val('mnm-parallel') || '64' ];
+		return [ nets, val('mnm-ranges'), services, val('mnm-extra-ports'), val('mnm-timeout') || '800', val('mnm-parallel') || '64' ];
 	},
 
 	// --------------------------------------------------------------- table
@@ -199,7 +277,7 @@ return view.extend({
 					'title': online(d) ? _('seen in the last scan') : _('not seen in the last scan') })),
 				E('td', { 'class': 'td' }, [ E('strong', {}, displayName(d)), E('br'), E('span', { 'class': 'mnm-sub' }, d.network || '') ]),
 				E('td', { 'class': 'td mnm-mono' }, d.ipv4 || '-'),
-				E('td', { 'class': 'td mnm-mono' }, v6.length ? [ v6[0], v6.length > 1 ? E('span', { 'class': 'mnm-sub' }, ' +' + (v6.length - 1)) : '' ] : '-'),
+				E('td', { 'class': 'td mnm-mono', 'title': v6.join('\n') }, v6.length ? [ shortV6(v6[0]), v6.length > 1 ? E('span', { 'class': 'mnm-sub' }, ' +' + (v6.length - 1)) : '' ] : '-'),
 				E('td', { 'class': 'td' }, d.vendor || '-'),
 				E('td', { 'class': 'td' }, serviceChips(d)),
 				E('td', { 'class': 'td mnm-mono' }, (d.tcp || []).join(', ') || '-'),
@@ -294,13 +372,11 @@ return view.extend({
 	},
 
 	async handleStart() {
-		const [ nets, ranges, ports, timeout, parallel ] = this.formValues();
-		return this.report(await callStart(nets, ranges, ports, timeout, parallel, ''));
+		return this.report(await callStart(...this.formValues(), ''));
 	},
 
 	async handleScanDevice(address) {
-		const [ nets, ranges, ports, timeout, parallel ] = this.formValues();
-		return this.report(await callStart(nets, ranges, ports, timeout, parallel, address));
+		return this.report(await callStart(...this.formValues(), address));
 	},
 
 	async handleStop() {
@@ -318,8 +394,9 @@ return view.extend({
 		return this.report(await callUpdateVendors());
 	},
 
-	render([ st, networks ]) {
+	render([ st, networks, catalog ]) {
 		this.status = st;
+		this.catalog = catalog || { groups: [] };
 		const node = E('div', {}, [
 			E('style', {}, STYLE),
 			E('h2', {}, _('MyNetworkMonitor')),

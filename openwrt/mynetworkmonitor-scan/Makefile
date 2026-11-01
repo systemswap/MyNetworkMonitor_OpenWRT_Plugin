@@ -32,7 +32,8 @@ endef
 
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
-	$(CP) "$(MNM_SOURCE)/scanner/src" "$(MNM_SOURCE)/scanner/Makefile" "$(MNM_SOURCE)/LICENSE" $(PKG_BUILD_DIR)/
+	$(CP) "$(MNM_SOURCE)/scanner/src" "$(MNM_SOURCE)/scanner/data" "$(MNM_SOURCE)/scanner/Makefile" \
+		"$(MNM_SOURCE)/LICENSE" $(PKG_BUILD_DIR)/
 endef
 
 define Build/Compile
@@ -44,6 +45,9 @@ endef
 define Package/mynetworkmonitor-scan/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/mynetworkmonitor-scan $(1)/usr/bin/
+	# What the scanner can look for, in groups; read by the LuCI page and its backend.
+	$(INSTALL_DIR) $(1)/usr/share/mynetworkmonitor
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/data/services.json $(1)/usr/share/mynetworkmonitor/
 endef
 
 $(eval $(call BuildPackage,mynetworkmonitor-scan))

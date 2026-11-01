@@ -20,12 +20,13 @@
 
 struct mnm_discover_options {
 	int timeout_ms;                  /* how long to wait for answers after the last request */
+	int ping;                        /* also ping all targets (ARP always runs) */
 	volatile sig_atomic_t *stop;
 	void (*on_change)(void *context);   /* called when devices were added or changed */
 	void *context;
 };
 
-/* ARP in the local networks, then ping to all targets that did not answer yet.
+/* ARP in the local networks, then (if options->ping) ping to all targets.
  * Returns 1 if stopped early, else 0; missing rights are not an error, the
  * method is then skipped (see the warnings written to stderr). */
 int mnm_discover_arp_ping(const struct mnm_targets *targets, struct mnm_devices *devices,

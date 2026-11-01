@@ -28,6 +28,7 @@ const VENDOR_PIDFILE = WORK + '/vendors.pid';
 const RAM_STORE = WORK + '/store';
 const FLASH_STORE = '/etc/mynetworkmonitor';
 const VENDOR_URL = 'https://www.wireshark.org/download/automated/data/manuf';
+const CATALOG = '/usr/share/mynetworkmonitor/services.json';
 
 const STORE_FORMAT = 1;
 const SCAN_FORMAT = 2;
@@ -173,6 +174,33 @@ function merge_finished_scan() {
 	save_store(merged);
 }
 
+// ---------------------------------------------------------------- catalog
+
+function load_catalog() {
+	const c = read_json(CATALOG);
+	return (c != null && c.format == 1 && type(c.groups) == 'array') ? c : { format: 1, groups: [] };
+}
+
+// The TCP ports of the chosen services, ascending, without duplicates.
+function ports_of(catalog, chosen) {
+	const ports = [];
+	for (let g in catalog.groups)
+		for (let item in g.items)
+			if (index(chosen, item.id) >= 0)
+				for (let p in (item.tcp ?? []))
+					if (index(ports, p) < 0)
+						push(ports, p);
+	return sort(ports, (a, b) => a - b);
+}
+
+function known_ids(catalog) {
+	const ids = [];
+	for (let g in catalog.groups)
+		for (let item in g.items)
+			push(ids, item.id);
+	return ids;
+}
+
 // ---------------------------------------------------------------- networks
 
 function ipv4_value(text) {
@@ -267,6 +295,12 @@ const methods = {
 		}
 	},
 
+	catalog: {
+		call: function() {
+			return load_catalog();
+		}
+	},
+
 	networks: {
 		call: function() {
 			return { networks: map(router_networks(), n => ({ name: n.name, device: n.device, address: n.address, cidr: n.cidr })) };
@@ -278,7 +312,7 @@ const methods = {
 	// With "target" set, only that one device is scanned and the stored
 	// settings stay as they are.
 	start: {
-		args: { networks: [ 'lan' ], ranges: '', ports: '', timeout_ms: '800', parallel: '64', target: '' },
+		args: { networks: [ 'lan' ], ranges: '', services: [ 'ping' ], extra_ports: '', timeout_ms: '800', parallel: '64', target: '' },
 		call: function(req) {
 			if (running_pid(PIDFILE, 'mynetworkmonitor-scan') != null)
 				return { error: 'A scan is already running.' };
@@ -286,20 +320,33 @@ const methods = {
 
 			const target = trim('' + (req.args.target ?? ''));
 			const ranges = trim('' + (req.args.ranges ?? ''));
-			const ports = trim('' + (req.args.ports ?? ''));
+			const extra_ports = trim('' + (req.args.extra_ports ?? ''));
+			const services = (type(req.args.services) == 'array') ? req.args.services : [];
 			const timeout = int_option(req.args.timeout_ms, 50, 10000, 800);
 			const parallel = int_option(req.args.parallel, 1, 256, 64);
 			const wanted = (type(req.args.networks) == 'array') ? req.args.networks : [];
 
-			if (length(ranges) > MAX_LENGTH || length(ports) > MAX_LENGTH)
+			if (length(ranges) > MAX_LENGTH || length(extra_ports) > MAX_LENGTH)
 				return { error: 'The list of ranges or ports is too long.' };
 			if (!match(ranges, RANGES_PATTERN))
 				return { error: 'Own ranges may only contain addresses, ranges (a-b) and networks (a/n), separated by commas.' };
-			if (!match(ports, PORTS_PATTERN))
+			if (!match(extra_ports, PORTS_PATTERN))
 				return { error: 'Ports may only contain numbers and ranges (a-b), separated by commas.' };
 			for (let n in wanted)
 				if (type(n) != 'string' || !match(n, NAME_PATTERN))
 					return { error: 'Invalid network name.' };
+			const catalog = load_catalog();
+			const known = known_ids(catalog);
+			for (let s in services)
+				if (type(s) != 'string' || index(known, s) < 0)
+					return { error: 'Unknown service: ' + s };
+
+			// The ports of the chosen services plus the additional ones; the scanner
+			// merges duplicates and overlapping ranges itself.
+			const parts = map(ports_of(catalog, services), p => '' + p);
+			if (length(extra_ports) > 0)
+				push(parts, extra_ports);
+			const ports = join(',', parts);
 
 			let targets;
 			if (length(target) > 0) {
@@ -308,20 +355,22 @@ const methods = {
 				targets = target;
 			}
 			else {
-				const parts = [];
+				const nets = [];
 				for (let n in router_networks())
 					if (index(wanted, n.name) >= 0)
-						push(parts, n.cidr);
+						push(nets, n.cidr);
 				if (length(ranges) > 0)
-					push(parts, ranges);
-				if (length(parts) == 0)
+					push(nets, ranges);
+				if (length(nets) == 0)
 					return { error: 'Choose at least one network or enter own ranges.' };
-				targets = join(',', parts);
+				targets = join(',', nets);
 
 				const uci = config();
 				uci.set('mynetworkmonitor', 'scan', 'networks', wanted);
 				uci.set('mynetworkmonitor', 'scan', 'ranges', ranges);
-				uci.set('mynetworkmonitor', 'scan', 'ports', ports);
+				uci.set('mynetworkmonitor', 'scan', 'services', services);
+				uci.set('mynetworkmonitor', 'scan', 'services_chosen', '1');
+				uci.set('mynetworkmonitor', 'scan', 'extra_ports', extra_ports);
 				uci.set('mynetworkmonitor', 'scan', 'timeout_ms', '' + timeout);
 				uci.set('mynetworkmonitor', 'scan', 'parallel', '' + parallel);
 				uci.commit('mynetworkmonitor');
@@ -334,6 +383,8 @@ const methods = {
 				SCANNER, shell_quote(targets), timeout, parallel, shell_quote(SCAN));
 			if (length(ports) > 0)
 				scan += ' --ports ' + shell_quote(ports);
+			if (index(services, 'ping') < 0)
+				scan += ' --no-ping';
 			const vendors = store_dir() + '/manuf';
 			if (stat(vendors) != null)
 				scan += ' --vendors ' + shell_quote(vendors);

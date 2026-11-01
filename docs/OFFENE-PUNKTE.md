@@ -10,7 +10,7 @@ Ausbaustufen, jede für sich benutzbar:
 
 1. **Geräteliste im Test bestätigen** (gebaut in 0.0.4-beta): Seite mit Tabelle und Details vom Nutzer ansehen lassen;
    Hersteller und MAC-Adressen auf einem Gerät im selben Netzsegment prüfen (MX4200 oder VM an `br0`).
-2. **Dienst-Sonden:** `probes.json` mit allen Erkennungspaketen; zuerst die Sonden mit einfacher Antwortprüfung,
+2. **Dienst-Sonden:** die Erkennungspakete in `services.json`; zuerst die Sonden mit einfacher Antwortprüfung,
    dann die mit eigenem Verfahren (OPC UA, S7, SECS/GEM, Modbus, MS-SQL, BACnet, DHCP, DNS, WAGO, Web).
 3. **Rundrufe:** SSDP/UPnP samt Gerätebeschreibung, NetBIOS-Namensabfrage, ONVIF (WS-Discovery).
 4. **SNMP, SMB, Zertifikate:** SNMP v2c (Systemname, Beschreibung), angebotene SMB-Versionen, Zertifikate von
