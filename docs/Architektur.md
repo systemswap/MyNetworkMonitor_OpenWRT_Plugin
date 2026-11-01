@@ -281,9 +281,11 @@ Zeitlich geordnet, neue ans Ende.
 ### 01.11.2026 – Bau aller Architekturen und Releases auf GitHub
 
 - **Entschieden (Wunsch des Nutzers):** `.github/workflows/build-and-release.yml` baut für die Paketarchitekturen
-  aus `packaging/architectures` (dort alle 35 von OpenWrt 25.12.6; aktiv ist zunächst nur `aarch64_cortex-a53` für den
-  ersten Test auf einem bekannten Gerät, Entscheidung des Nutzers vom 01.11.2026) im offiziellen SDK-Container (`openwrt/sdk:<architektur>-25.12.6`) und legt
-  ein Release mit allen Paketen an – einmal je Version in `VERSION`, wenn es dafür noch keins gibt; Beta-Versionen als
+  aus `packaging/architectures` (dort alle 35 von OpenWrt 25.12.6; aktiv sind auf Wunsch des Nutzers vom 01.11.2026
+  `aarch64_cortex-a53` für den MX4200 und den Raspberry Pi 3 mit 64 Bit, `arm_cortex-a7_neon-vfpv4` für Pi 2/3 mit
+  32 Bit, `aarch64_cortex-a72` für Pi 4, `aarch64_cortex-a76` für Pi 5) im offiziellen SDK-Container (`openwrt/sdk:<architektur>-25.12.6`) und legt
+  ein Release mit allen Paketen an – einmal je Version in `VERSION`, wenn es dafür noch keins gibt, und ergänzt es,
+  wenn später eine Architektur dazukommt (Text des Releases bleibt der des Versions-Commits); Beta-Versionen als
   Vorabversion. Davor laufen die Tests (mbedTLS aus dem Quellarchiv, das auch das SDK nimmt, mit Prüfsumme).
 - **mbedTLS im SDK:** Es liegt in der Basis-Paketquelle von OpenWrt. Statt sie in jedem Bau ganz zu klonen, holt der
   Bau nur `package/libs/mbedtls` aus genau dem Commit, aus dem das SDK gebaut ist (aus `feeds.conf.default`).

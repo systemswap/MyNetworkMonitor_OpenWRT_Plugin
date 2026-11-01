@@ -36,7 +36,9 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - name: Is there a release for this version?
+      # Builds when there is no release for this version yet, or when it lacks the package of an architecture
+      # listed (one added to packaging/architectures later); the release is then completed.
+      - name: Is the release for this version complete?
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -46,12 +48,21 @@ jobs:
           archs=$(grep -v -E '^\s*(#|$)' packaging/architectures)
           echo "architectures=$(printf '%s\n' $archs | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().split()))')" >> "$GITHUB_OUTPUT"
           echo "first=$(printf '%s\n' $archs | head -1)" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ! gh release view "v$version" > /dev/null 2>&1; then
-            echo "build=true" >> "$GITHUB_OUTPUT"
+          build=false
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            build=true
+          elif ! assets=$(gh release view "v$version" --json assets -q '.assets[].name' 2>/dev/null); then
+            echo "No release v$version yet."
+            build=true
           else
-            echo "Release v$version exists, nothing to build."
-            echo "build=false" >> "$GITHUB_OUTPUT"
+            for arch in $archs; do
+              if ! printf '%s\n' "$assets" | grep -qx "mynetworkmonitor-scan_${version}_${arch}.apk"; then
+                echo "Release v$version lacks $arch."
+                build=true
+              fi
+            done
           fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
 
   # No packages from a state whose tests fail.
   tests:
@@ -141,6 +152,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -152,14 +165,13 @@ jobs:
           cp packaging/ANLEITUNG.txt LICENSE THIRD-PARTY-NOTICES.md dist/
           cd dist && sha256sum *.apk > SHA256SUMS && ls -la
 
-      # The release text is the commit message up to a line of three dashes; a longer reasoning below it
-      # stays in the history only.
+      # The release text is the message of the commit that set this version (also when a later run only adds
+      # architectures), up to a line of three dashes; a longer reasoning below it stays in the history only.
       - name: Release notes
         id: notes
-        env:
-          FULL: ${{ github.event.head_commit.message || format('Build of commit {0}', github.sha) }}
         run: |
-          short=$(printf '%s\n' "$FULL" | sed '/^---$/,$d')
+          full=$(git log -1 --format=%B -- VERSION)
+          short=$(printf '%s\n' "$full" | sed '/^---$/,$d')
           {
             echo 'body<<RELEASE_NOTES_EOF'
             printf '%s\n\n' "$short"
@@ -176,5 +188,6 @@ jobs:
           body: ${{ steps.notes.outputs.body }}
           prerelease: ${{ contains(needs.check-version.outputs.version, 'beta') }}
           files: dist/*
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
