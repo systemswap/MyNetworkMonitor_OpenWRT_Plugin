@@ -37,10 +37,8 @@ Ausbaustufen, jede für sich benutzbar:
 ## Später
 
 - **Alle Architekturen bauen:** GitHub-Bau mit dem SDK je Architektur – erst, wenn der Nutzer einen Remote will.
-- **Test auf dem Router des Nutzers:** Linksys MX4200 v1 (Ziel `qualcommax/ipq807x`, Paketarchitektur
-  `aarch64_cortex-a53`); SDK dafür nach Rückfrage wegen der Größe laden.
-- **Rundruf-Verfahren in der VM testen:** braucht einen echten Anschluss der VM an `br0` mit abgeschaltetem DHCP –
-  nur nach Rückfrage (Systemeinstellung für qemu-bridge-helper).
+- **Test auf einem echten Router:** Pakete für Linksys MX4200 v1 (`aarch64_cortex-a53`, OpenWrt 25.12) ab 0.0.26-beta
+  gebaut; Test auf dem Gerät steht aus (Installation, Scan, Rundrufe über WLAN-Brücke, Laufzeit und Speicher).
 
 ## Bewusst nicht (nicht wieder vorschlagen)
 
