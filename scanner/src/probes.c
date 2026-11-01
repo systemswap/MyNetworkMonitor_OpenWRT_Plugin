@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "probes_steps.h"
+#include "probes_smb.h"
 #include "probes_udp.h"
 #include "targets.h"
 
@@ -542,14 +543,10 @@ const struct mnm_probe mnm_probes[] = {
 
 const struct mnm_probe *mnm_probe_find(const char *id)
 {
-	for (const struct mnm_probe *p = mnm_probes; p->id; p++)
-		if (strcmp(p->id, id) == 0)
-			return p;
-	for (const struct mnm_probe *p = mnm_probes_steps; p->id; p++)
-		if (strcmp(p->id, id) == 0)
-			return p;
-	for (const struct mnm_probe *p = mnm_probes_udp; p->id; p++)
-		if (strcmp(p->id, id) == 0)
-			return p;
+	static const struct mnm_probe *const tables[] = { mnm_probes, mnm_probes_steps, mnm_probes_udp, mnm_probes_smb };
+	for (size_t t = 0; t < sizeof(tables) / sizeof(tables[0]); t++)
+		for (const struct mnm_probe *p = tables[t]; p->id; p++)
+			if (strcmp(p->id, id) == 0)
+				return p;
 	return NULL;
 }

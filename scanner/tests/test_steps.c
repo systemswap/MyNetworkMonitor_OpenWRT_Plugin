@@ -17,6 +17,7 @@
 
 #include "../src/netio.h"
 #include "../src/probes.h"
+#include "../src/probes_smb.h"
 #include "../src/probes_steps.h"
 #include "check.h"
 
@@ -75,7 +76,7 @@ static size_t components_answer(uint8_t *out)
 
 /* -------------------------------------------------------- test servers */
 
-enum role { S7, MODBUS, WAGO, SECSGEM };
+enum role { S7, MODBUS, WAGO, SECSGEM, SMB };
 
 struct server {
 	int listen_fd;
@@ -155,6 +156,32 @@ static void play_secsgem(struct server *s, int fd)
 	}
 }
 
+/* A file server that accepts SMB 1.0, 2.0.2, 2.1, 3.0 and - like a real one only
+ * with a negotiate context - 3.1.1, and refuses 3.0.2. */
+static void play_smb(int fd)
+{
+	uint8_t req[200], out[80];
+	if (read_n(fd, req, 4) != 0)
+		return;
+	size_t len = (size_t)req[2] << 8 | req[3];
+	if (len < 8 || len > sizeof(req) - 4 || read_n(fd, req + 4, len) != 0)
+		return;
+	memset(out, 0, sizeof(out));
+	out[3] = 76;
+	if (req[4] == 0xff) {
+		memcpy(out + 4, "\xffSMB\x72", 5);
+		out[36] = 17, out[37] = 0, out[38] = 0;   /* word count, dialect index 0 */
+	} else {
+		/* the dialect behind the fixed part of the request (header 64, body 36) */
+		unsigned int dialect = (unsigned int)req[4 + 101] << 8 | req[4 + 100];
+		int contexts = req[4 + 64 + 32];
+		memcpy(out + 4, "\xfeSMB\x40", 5);
+		if (dialect != 0x0202 && dialect != 0x0210 && dialect != 0x0300 && !(dialect == 0x0311 && contexts > 0))
+			out[12] = 0xbb, out[15] = 0xc0;    /* STATUS_NOT_SUPPORTED */
+	}
+	send(fd, out, 80, MSG_NOSIGNAL);
+}
+
 static void *converse(void *arg)
 {
 	struct conversation *c = arg;
@@ -163,6 +190,7 @@ static void *converse(void *arg)
 	case MODBUS: play_modbus(c->fd); break;
 	case WAGO: play_wago(c->fd); break;
 	case SECSGEM: play_secsgem(c->server, c->fd); break;
+	case SMB: play_smb(c->fd); break;
 	}
 	close(c->fd);
 	free(c);
@@ -295,6 +323,21 @@ void test_probes_steps(void)
 
 	CHECK(run_against(WAGO, "wago", d, sizeof(d), &s) == 1);
 	CHECK(strcmp(d, "Order number: 750-8212 · Description: Controller · Firmware: 03.10.08 · Serial: X1") == 0);
+
+	/* SMB: acceptance by dialect index (SMB1) and status (SMB2/3) */
+	uint8_t smb[64];
+	memset(smb, 0, sizeof(smb));
+	memcpy(smb + 4, "\xfeSMB", 4);
+	CHECK(mnm_smb_accepted(smb, 64, 0) == 1);
+	smb[12] = 0xbb, smb[15] = 0xc0;
+	CHECK(mnm_smb_accepted(smb, 64, 0) == 0);
+	memcpy(smb + 4, "\xffSMB", 4);
+	smb[36] = 17, smb[37] = 0xff, smb[38] = 0xff;
+	CHECK(mnm_smb_accepted(smb, 64, 1) == 0);
+	smb[37] = 0, smb[38] = 0;
+	CHECK(mnm_smb_accepted(smb, 64, 1) == 1 && mnm_smb_accepted(smb, 38, 1) == 0);
+	CHECK(run_against(SMB, "smb", d, sizeof(d), &s) == 1);
+	CHECK(strcmp(d, "Versions: 1.0, 2.0.2, 2.1, 3.0, 3.1.1") == 0 && s.connections == 6);
 
 	CHECK(run_against(SECSGEM, "secsgem", d, sizeof(d), &s) == 1);
 	CHECK(strcmp(d, "HSMS select accepted.") == 0 && s.separated == 1);

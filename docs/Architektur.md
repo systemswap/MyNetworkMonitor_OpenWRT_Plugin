@@ -201,3 +201,16 @@ Zeitlich geordnet, neue ans Ende.
   oder eine ausbleibende Antwort auf eine einzelne Eigenschaft lässt nur diese Angabe weg, statt den Fund zu
   verwerfen. UDP-Sockets sind verbunden, nehmen also nur Antworten des gefragten Geräts an.
 
+### 01.11.2026 – SMB-Versionen (Stufe 3b, SMB)
+
+- **Entschieden:** Für jeden Dialekt eine eigene Verbindung zu Port 445 (1.0, 2.0.2, 2.1, 3.0, 3.0.2, 3.1.1), ein
+  Lesen bis 1024 Byte; ein Server nimmt einen angefragten Dialekt im Status seiner Antwort an oder lehnt ihn ab, nur
+  einzelne Anfragen zeigen also, was er anbietet. Angenommen heißt: SMB1 mit einer Dialektnummer ungleich 0xFFFF,
+  SMB2/3 mit Status 0 ([MS-SMB2] 2.2.1). Wartezeiten wie im Desktop-Programm: 5 s für die Verbindung, 2 s für die
+  Antwort. Auf Port 139 läuft die Prüfung nicht – dort braucht SMB zuerst eine NetBIOS-Sitzung.
+- **Pakete** Byte für Byte die des Desktop-Programms. Die Anfrage für 3.1.1 trägt die Angabe zur Vorab-Integrität
+  (2.2.3.1.1); ohne sie lehnen Server den Dialekt ab (`STATUS_INVALID_PARAMETER`) – im Desktop-Programm mit 7.3.0.35
+  ebenso korrigiert, mit Zustimmung des Nutzers.
+- **Abweichung:** Die siebte Anfrage des Desktop-Programms mit allen Dialekten, deren Antwort es nicht auswertet,
+  entfällt.
+

@@ -19,6 +19,7 @@
 #include "../src/json.h"
 #include "../src/packets.h"
 #include "../src/probes.h"
+#include "../src/probes_smb.h"
 #include "../src/probes_steps.h"
 #include "../src/probes_udp.h"
 #include "../src/textdata.h"
@@ -525,6 +526,9 @@ static void test_probes(void)
 		for (size_t len = 0; len <= sizeof(junk); len++)
 			p->identify(junk, len);
 	for (const struct mnm_probe *p = mnm_probes_udp; p->id; p++)
+		for (size_t len = 0; len <= sizeof(junk); len++)
+			p->identify(junk, len);
+	for (const struct mnm_probe *p = mnm_probes_smb; p->id; p++)
 		for (size_t len = 0; len <= sizeof(junk); len++)
 			p->identify(junk, len);
 }

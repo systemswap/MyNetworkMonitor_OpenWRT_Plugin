@@ -31,7 +31,7 @@
 			{ "id": "bigfix", "name": "BigFix remote control", "tcp": [888], "default": true, "probes": ["bigfixremote"] }
 		] },
 		{ "id": "files", "name": "File services", "icon": "🗂️", "items": [
-			{ "id": "smb", "name": "SMB (Windows file sharing)", "tcp": [139, 445], "default": true }
+			{ "id": "smb", "name": "SMB (Windows file sharing)", "tcp": [139, 445], "default": true, "probes": ["smb"] }
 		] },
 		{ "id": "cameras", "name": "Cameras", "icon": "📷", "items": [
 			{ "id": "onvif", "name": "ONVIF cameras", "hint": "WS-Discovery for cameras", "available": false, "default": true }
