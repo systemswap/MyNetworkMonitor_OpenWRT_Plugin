@@ -36,8 +36,9 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      # Builds when there is no release for this version yet, or when it lacks the package of an architecture
-      # listed (one added to packaging/architectures later); the release is then completed.
+      # Builds when there is no release for this version yet, or when it lacks a file - the package of an
+      # architecture added to packaging/architectures later, or an accompanying document; the release is then
+      # completed.
       - name: Is the release for this version complete?
         id: check
         env:
@@ -55,9 +56,10 @@ jobs:
             echo "No release v$version yet."
             build=true
           else
-            for arch in $archs; do
-              if ! printf '%s\n' "$assets" | grep -qx "mynetworkmonitor-scan_${version}_${arch}.apk"; then
-                echo "Release v$version lacks $arch."
+            for file in $(for a in $archs; do echo "mynetworkmonitor-scan_${version}_${a}.apk"; done) \
+                        ANLEITUNG.txt GERAETE.md LICENSE THIRD-PARTY-NOTICES.md SHA256SUMS; do
+              if ! printf '%s\n' "$assets" | grep -qx "$file"; then
+                echo "Release v$version lacks $file."
                 build=true
               fi
             done
@@ -162,7 +164,7 @@ jobs:
 
       - name: Instructions, licence and checksums
         run: |
-          cp packaging/ANLEITUNG.txt LICENSE THIRD-PARTY-NOTICES.md dist/
+          cp packaging/ANLEITUNG.txt packaging/GERAETE.md LICENSE THIRD-PARTY-NOTICES.md dist/
           cd dist && sha256sum *.apk > SHA256SUMS && ls -la
 
       # The release text is the message of the commit that set this version (also when a later run only adds
@@ -176,7 +178,8 @@ jobs:
             echo 'body<<RELEASE_NOTES_EOF'
             printf '%s\n\n' "$short"
             echo "Packages for OpenWrt $OPENWRT_RELEASE (apk). Pick mynetworkmonitor-scan for the architecture of the router"
-            echo "(apk --print-arch on the router) and luci-app-mynetworkmonitor; installation: ANLEITUNG.txt."
+            echo "(apk --print-arch on the router; devices and chipsets: GERAETE.md) and luci-app-mynetworkmonitor;"
+            echo "installation: ANLEITUNG.txt."
             echo 'RELEASE_NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
 
