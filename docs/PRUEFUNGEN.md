@@ -70,6 +70,14 @@ Netzbrücke des Rechners. OpenWrt ist dafür reines Endgerät: `lan` holt die Ad
 `ignore=1`, `dhcpv4`, `dhcpv6` und `ra` auf `disabled` – sonst verteilte es Adressen und IPv6-Ankündigungen im Heimnetz.
 Root hat ein zufälliges Passwort (LuCI), SSH mit einem eigenen Schlüssel; beides nur im lokalen Testordner.
 
+### Erkennungspakete
+
+Die Pakete in `scanner/src/probes.c` müssen Byte für Byte denen des Desktop-Programms entsprechen. Vor jedem Commit,
+der sie berührt, vergleicht ein Skript im lokalen Testordner jedes Array mit dem C#-Quellcode (Länge und jedes Byte,
+gebaute Pakete wie Oracle-TNS und DNS nachgerechnet); nur bei „all identical“ wird committet. Die Prüfregeln haben
+Tests in `scanner/tests/tests.c` (je Sonde eine passende und fremde Antworten, alle Prüfungen auf Antworten von 0 bis
+64 Byte unter AddressSanitizer).
+
 ### Bedienung wie ein Nutzer (Maustest)
 
     python3 tests/ui/check_page.py <adresse des routers> <datei mit dem root-passwort>
@@ -86,3 +94,4 @@ auf höchstens zwei Zeilen. Bildschirmfotos im Testordner.
 | 01.11.2026 | 0.0.1-beta | 58 Prüfungen grün; Pakete gebaut (apk 7,8 KB und 6 KB, Programm 16 KB); in der VM zwei Fehler im Backend gefunden (Fehlergedächtnis Nr. 1 und 2) |
 | 01.11.2026 | 0.0.2-beta | Scan der VM über ubus: Ports 22, 53, 80, 443 gefunden; Stopp mit Teilergebnis; Einschleusen über Bereich und Ports abgelehnt |
 | 01.11.2026 | 0.0.9-beta | Maustest bei 1920×1080 und 1366×768 ohne Befund; 129 Prüfungen grün |
+| 01.11.2026 | 0.0.13-beta | Stufe 3a: 16 Pakete identisch mit dem Desktop-Programm; 156 Prüfungen grün; im Heimnetz erkannt: SSH mit Version, HTTP mit Server, DNS, RDP mit Sicherheitsstufe, VNC mit Protokoll; Maustest ohne Befund |

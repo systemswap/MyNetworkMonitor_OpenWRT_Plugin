@@ -3,9 +3,10 @@
  * mynetworkmonitor-scan: runs one scan and writes what it finds as JSON.
  *
  * It is started by the LuCI backend for each scan and ends when the scan is
- * done; it never listens on a port. The scan runs in two phases: first the
+ * done; it never listens on a port. The scan runs in three phases: first the
  * devices are found (ARP, ping, neighbour table, DHCP leases, vendor), then
- * their TCP ports are tried. The output file is rewritten at most once a
+ * their TCP ports are tried, then the services behind the open ports are
+ * recognised by their answer to a probe. The output file is rewritten at most once a
  * second while the scan runs, so that the page shows each device as soon as it
  * is found; it is replaced atomically (written to a temporary name, then
  * renamed), so a reader never sees half a file.
@@ -22,6 +23,7 @@
 #include "devices.h"
 #include "discover.h"
 #include "json.h"
+#include "probe_engine.h"
 #include "ports.h"
 #include "targets.h"
 #include "tcpscan.h"
@@ -42,6 +44,14 @@ struct scan {
 	uint64_t done, total;
 	int64_t last_write_ms;
 };
+
+/* A probe and the ports it is tried on (--probe id=ports). */
+struct probe_map {
+	const struct mnm_probe *probe;
+	struct mnm_ports ports;
+};
+
+#define MAX_PROBE_MAPS 64
 
 static volatile sig_atomic_t stop_requested;
 
@@ -113,6 +123,43 @@ static void on_open(void *context, uint32_t address, uint16_t port)
 	mnm_devices_mark(&scan->devices, d, MNM_SEEN_TCP);
 }
 
+static void on_service(void *context, uint32_t address, uint16_t port, const struct mnm_probe *probe,
+		       const char *detail)
+{
+	struct scan *scan = context;
+	struct mnm_device *d = mnm_devices_find(&scan->devices, address);
+	if (d)
+		mnm_devices_add_service(&scan->devices, d, probe->id, probe->name, port, detail);
+}
+
+/* "ssh=22" or "web=80,443,8080": a known probe and its ports. */
+static int parse_probe_map(const char *text, struct probe_map *map, char *err, size_t errlen)
+{
+	const char *eq = strchr(text, '=');
+	char id[32];
+
+	if (!eq || eq == text || (size_t)(eq - text) >= sizeof(id)) {
+		snprintf(err, errlen, "expected id=ports, got \"%.40s\"", text);
+		return -1;
+	}
+	memcpy(id, text, (size_t)(eq - text));
+	id[eq - text] = '\0';
+	map->probe = mnm_probe_find(id);
+	if (!map->probe) {
+		snprintf(err, errlen, "unknown probe \"%s\"", id);
+		return -1;
+	}
+	return mnm_ports_parse(eq + 1, &map->ports, err, errlen);
+}
+
+static int map_has_port(const struct probe_map *map, uint16_t port)
+{
+	for (size_t i = 0; i < map->ports.count; i++)
+		if (map->ports.list[i] == port)
+			return 1;
+	return 0;
+}
+
 static void on_progress(void *context, uint64_t done, uint64_t total)
 {
 	struct scan *scan = context;
@@ -149,6 +196,7 @@ static void usage(FILE *out)
 	      "  --timeout-ms N      time to wait for answers (50-10000, default 800)\n"
 	      "  --parallel N        TCP connections at the same time (1-256, default 64)\n"
 	      "  --no-ping           find devices by ARP and the neighbour table only\n"
+	      "  --probe ID=PORTS    recognise a service on these ports by its answer, e.g. ssh=22 (repeatable)\n"
 	      "  --allow-public      also scan addresses outside the private ranges\n"
 	      "  --version           print the version\n",
 	      out);
@@ -179,6 +227,7 @@ int main(int argc, char **argv)
 		{ "parallel", required_argument, NULL, 'j' },
 		{ "allow-public", no_argument, NULL, 'P' },
 		{ "no-ping", no_argument, NULL, 'N' },
+		{ "probe", required_argument, NULL, 'b' },
 		{ "version", no_argument, NULL, 'V' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 },
@@ -190,6 +239,8 @@ int main(int argc, char **argv)
 	struct mnm_tcpscan_options tcp = { .parallel = 64, .timeout_ms = 800 };
 	char err[200];
 	int allow_public = 0, ping = 1;
+	struct probe_map maps[MAX_PROBE_MAPS];
+	size_t map_count = 0;
 	int c;
 
 	while ((c = getopt_long(argc, argv, "", long_options, NULL)) != -1) {
@@ -213,6 +264,13 @@ int main(int argc, char **argv)
 			break;
 		case 'P': allow_public = 1; break;
 		case 'N': ping = 0; break;
+		case 'b':
+			if (map_count == MAX_PROBE_MAPS || parse_probe_map(optarg, &maps[map_count], err, sizeof(err)) != 0) {
+				fprintf(stderr, "--probe: %s\n", map_count == MAX_PROBE_MAPS ? "too many" : err);
+				return 2;
+			}
+			map_count++;
+			break;
 		case 'V': puts(MNM_VERSION); return 0;
 		case 'h': usage(stdout); return 0;
 		default: usage(stderr); return 2;
@@ -287,6 +345,50 @@ int main(int argc, char **argv)
 		}
 	}
 
+	/* Phase 3: the services behind the open ports. */
+	if (!interrupted && status == 0 && map_count) {
+		size_t capacity = 0, count = 0;
+		struct mnm_probe_job *jobs = NULL;
+		for (size_t i = 0; i < scan.devices.count; i++) {
+			struct mnm_device *dev = &scan.devices.list[i];
+			for (size_t k = 0; k < dev->tcp_count; k++) {
+				for (size_t m = 0; m < map_count; m++) {
+					if (!map_has_port(&maps[m], dev->tcp[k]))
+						continue;
+					if (count == capacity) {
+						capacity = capacity ? capacity * 2 : 64;
+						struct mnm_probe_job *j = realloc(jobs, capacity * sizeof(*j));
+						if (!j) {
+							free(jobs);
+							jobs = NULL;
+							count = 0;
+							status = 1;
+							goto no_jobs;
+						}
+						jobs = j;
+					}
+					jobs[count++] = (struct mnm_probe_job){ dev->ipv4, dev->tcp[k], maps[m].probe };
+				}
+			}
+		}
+		if (count) {
+			struct mnm_probe_options po = { .parallel = tcp.parallel, .timeout_ms = tcp.timeout_ms + 1500,
+							.stop = &stop_requested, .on_found = on_service,
+							.on_progress = on_progress, .context = &scan };
+			scan.phase = "services";
+			int outcome = mnm_probe_run(jobs, count, &po);
+			if (outcome == 1)
+				interrupted = 1;
+			else if (outcome < 0)
+				status = 1;
+		}
+		if (!interrupted && status == 0)
+			for (size_t i = 0; i < scan.devices.count; i++)
+				scan.devices.list[i].services_checked = 1;
+no_jobs:
+		free(jobs);
+	}
+
 	scan.phase = "finished";
 	scan.state = status ? "failed" : (interrupted || stop_requested) ? "stopped" : "done";
 	scan.finished = time(NULL);
@@ -298,5 +400,7 @@ int main(int argc, char **argv)
 	mnm_devices_free(&scan.devices);
 	mnm_targets_free(&targets);
 	mnm_ports_free(&ports);
+	for (size_t m = 0; m < map_count; m++)
+		mnm_ports_free(&maps[m].ports);
 	return status;
 }

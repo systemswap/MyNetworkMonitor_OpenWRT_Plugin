@@ -14,6 +14,7 @@
 #include <netinet/in.h>
 
 #define MNM_MAX_IPV6 8
+#define MNM_MAX_SERVICES 16
 #define MNM_NAME_LEN 64
 #define MNM_VENDOR_LEN 96
 
@@ -24,6 +25,14 @@ enum {
 	MNM_SEEN_NEIGHBOR = 4,   /* in the neighbour table of the router */
 	MNM_SEEN_LEASE = 8,      /* has a DHCP lease of the router */
 	MNM_SEEN_TCP = 16,       /* answered on a TCP port */
+};
+
+/* A service recognised by its answer, not only by an open port. */
+struct mnm_service {
+	const char *id;          /* probe id, a static string of the probe table */
+	const char *name;        /* its display name, also static */
+	uint16_t port;
+	char detail[96];
 };
 
 struct mnm_device {
@@ -39,6 +48,9 @@ struct mnm_device {
 	int ports_scanned;       /* the TCP ports of this device were tried in this scan */
 	uint16_t *tcp;
 	size_t tcp_count, tcp_capacity;
+	struct mnm_service services[MNM_MAX_SERVICES];
+	int service_count;
+	int services_checked;    /* the probes ran on this device in this scan */
 };
 
 struct mnm_devices {
@@ -56,6 +68,9 @@ struct mnm_device *mnm_devices_find(struct mnm_devices *devices, uint32_t ipv4);
 void mnm_devices_set_mac(struct mnm_devices *devices, struct mnm_device *device, const uint8_t mac[6]);
 void mnm_devices_add_ipv6(struct mnm_devices *devices, const uint8_t mac[6], const struct in6_addr *address);
 void mnm_devices_add_tcp(struct mnm_devices *devices, struct mnm_device *device, uint16_t port);
+/* Records a recognised service (once per service and port). */
+void mnm_devices_add_service(struct mnm_devices *devices, struct mnm_device *device, const char *id, const char *name,
+			     uint16_t port, const char *detail);
 void mnm_devices_mark(struct mnm_devices *devices, struct mnm_device *device, unsigned int seen);
 
 /* Writes the devices as a JSON array, ordered by address (the list itself

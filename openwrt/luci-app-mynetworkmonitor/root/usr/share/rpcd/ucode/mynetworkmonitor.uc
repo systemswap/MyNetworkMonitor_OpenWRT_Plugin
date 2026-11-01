@@ -155,9 +155,27 @@ function merge(store, scan, when) {
 		else {
 			s.tcp = sort(union(s.tcp, d.tcp), (a, b) => a - b);
 		}
+		// Recognised services: a finished probe run replaces them, an
+		// interrupted one adds what it found.
+		if (d.services_checked)
+			s.services = d.services ?? [];
+		else {
+			const all = [ ...(s.services ?? []) ];
+			for (let x in (d.services ?? []))
+				if (length(filter(all, y => y.id == x.id && y.port == x.port)) == 0)
+					push(all, x);
+			s.services = all;
+		}
 		s.last_seen = when;
 	}
 	return { ...store, devices: devices };
+}
+
+// Whether a scan covered only one device ("Scan this device"). Such a scan
+// must not decide which devices count as online: all others were not asked
+// (docs/FEHLERGEDAECHTNIS.md, No. 9).
+function single_device(scan) {
+	return match(scan.targets ?? '', IPV4_PATTERN) != null;
 }
 
 // Merges a finished scan into the stored list, once per scan.
@@ -170,7 +188,8 @@ function merge_finished_scan() {
 		return;
 	const merged = merge(store, scan, scan.finished || scan.started);
 	merged.merged_scan = scan.started;
-	merged.last_scan = scan.started;
+	if (!single_device(scan))
+		merged.last_scan = scan.started;
 	save_store(merged);
 }
 
@@ -287,7 +306,7 @@ const methods = {
 				scan: scan ? { state: scan.state, phase: scan.phase, done: scan.done, total: scan.total,
 					started: scan.started, finished: scan.finished, targets: scan.targets } : null,
 				error: (error != null && length(error) > 0) ? error : null,
-				last_scan: (running && scan) ? scan.started : store.last_scan,
+				last_scan: (running && scan && !single_device(scan)) ? scan.started : store.last_scan,
 				persist: store_dir() == FLASH_STORE,
 				version: trim(readfile('/usr/share/mynetworkmonitor/version') ?? ''),
 				devices: store.devices,
@@ -349,6 +368,15 @@ const methods = {
 				push(parts, extra_ports);
 			const ports = join(',', parts);
 
+			// The probes of each chosen service ("probes" in the catalog), on the
+			// ports of that service.
+			const probes = [];
+			for (let g in catalog.groups)
+				for (let item in g.items)
+					if (index(services, item.id) >= 0 && length(item.tcp ?? []) > 0)
+						for (let id in (item.probes ?? []))
+							push(probes, sprintf('%s=%s', id, join(',', map(item.tcp, p => '' + p))));
+
 			let targets;
 			if (length(target) > 0) {
 				if (!match(target, IPV4_PATTERN))
@@ -386,6 +414,8 @@ const methods = {
 				scan += ' --ports ' + shell_quote(ports);
 			if (index(services, 'ping') < 0)
 				scan += ' --no-ping';
+			for (let p in probes)
+				scan += ' --probe ' + shell_quote(p);
 			const vendors = store_dir() + '/manuf';
 			if (stat(vendors) != null)
 				scan += ' --vendors ' + shell_quote(vendors);

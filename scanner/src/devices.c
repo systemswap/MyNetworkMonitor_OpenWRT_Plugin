@@ -2,6 +2,7 @@
 #include "devices.h"
 
 #include <arpa/inet.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -78,6 +79,22 @@ void mnm_devices_add_tcp(struct mnm_devices *devices, struct mnm_device *device,
 		device->tcp_capacity = grown;
 	}
 	device->tcp[device->tcp_count++] = port;
+	devices->changed = 1;
+}
+
+void mnm_devices_add_service(struct mnm_devices *devices, struct mnm_device *device, const char *id, const char *name,
+			     uint16_t port, const char *detail)
+{
+	for (int i = 0; i < device->service_count; i++)
+		if (device->services[i].port == port && strcmp(device->services[i].id, id) == 0)
+			return;
+	if (device->service_count >= MNM_MAX_SERVICES)
+		return;
+	struct mnm_service *s = &device->services[device->service_count++];
+	s->id = id;
+	s->name = name;
+	s->port = port;
+	snprintf(s->detail, sizeof(s->detail), "%s", detail ? detail : "");
 	devices->changed = 1;
 }
 
@@ -164,6 +181,16 @@ void mnm_devices_write_json(struct mnm_devices *devices, FILE *out)
 			qsort(d->tcp, d->tcp_count, sizeof(*d->tcp), compare_ports);
 		for (size_t k = 0; k < d->tcp_count; k++)
 			fprintf(out, "%s%u", k ? "," : "", d->tcp[k]);
+		fprintf(out, "],\"services_checked\":%s,\"services\":[", d->services_checked ? "true" : "false");
+		for (int k = 0; k < d->service_count; k++) {
+			fprintf(out, "%s{\"id\":", k ? "," : "");
+			mnm_json_string(out, d->services[k].id, strlen(d->services[k].id));
+			write_string_field(out, "name", d->services[k].name);
+			fprintf(out, ",\"port\":%u", d->services[k].port);
+			if (d->services[k].detail[0])
+				write_string_field(out, "detail", d->services[k].detail);
+			fputc('}', out);
+		}
 		fputs("]}", out);
 	}
 	fputc(']', out);

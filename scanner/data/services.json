@@ -1,6 +1,6 @@
 {
 	"format": 1,
-	"comment": "What the scanner can look for, in groups. 'tcp' are the ports tried for a service; 'available' false marks a method that is planned but not built yet. 'default' is the choice of a new installation.",
+	"comment": "What the scanner can look for, in groups. 'tcp' are the ports tried for a service, 'probes' the probes of the scanner that recognise it by its answer; 'available' false marks a method that is planned but not built yet. 'default' is the choice of a new installation.",
 	"groups": [
 		{ "id": "discovery", "name": "Finding devices", "icon": "🔎", "items": [
 			{ "id": "ping", "name": "Ping", "hint": "Finds devices behind another router; ARP and the neighbour table always run", "available": true, "default": true },
@@ -14,44 +14,44 @@
 			{ "id": "snmp", "name": "SNMP", "hint": "Name and description of printers, switches and NAS", "available": false, "default": true }
 		] },
 		{ "id": "network", "name": "Network services", "icon": "🌍", "items": [
-			{ "id": "web", "name": "Web servers", "tcp": [ 80, 443, 1880, 3000, 5000, 5001, 8080, 8086, 8443 ], "default": true },
-			{ "id": "ssh", "name": "SSH", "tcp": [ 22 ], "default": true },
-			{ "id": "ftp", "name": "FTP", "tcp": [ 21 ], "default": true },
-			{ "id": "dns", "name": "DNS", "tcp": [ 53 ], "default": true },
+			{ "id": "web", "name": "Web servers", "tcp": [80, 443, 1880, 3000, 5000, 5001, 8080, 8086, 8443], "default": true, "probes": ["webservices"] },
+			{ "id": "ssh", "name": "SSH", "tcp": [22], "default": true, "probes": ["ssh"] },
+			{ "id": "ftp", "name": "FTP", "tcp": [21], "default": true, "probes": ["ftp"] },
+			{ "id": "dns", "name": "DNS", "tcp": [53], "default": true, "probes": ["dns_tcp"] },
 			{ "id": "dhcp", "name": "DHCP server", "hint": "UDP", "available": false, "default": true }
 		] },
 		{ "id": "remote", "name": "Remote desktop & remote maintenance", "icon": "🖥️", "items": [
-			{ "id": "rdp", "name": "RDP", "tcp": [ 3389 ], "default": true },
-			{ "id": "vnc", "name": "VNC", "tcp": [ 5900, 5901, 5902, 5903 ], "default": true },
-			{ "id": "teamviewer", "name": "TeamViewer", "tcp": [ 5938 ], "default": true },
-			{ "id": "anydesk", "name": "AnyDesk", "tcp": [ 7070 ], "default": true },
-			{ "id": "rustdesk_server", "name": "RustDesk server", "tcp": [ 5990, 5991, 21115, 21116 ], "default": true },
-			{ "id": "rustdesk_client", "name": "RustDesk client", "tcp": [ 21118 ], "default": true },
-			{ "id": "bigfix", "name": "BigFix remote control", "tcp": [ 888 ], "default": true }
+			{ "id": "rdp", "name": "RDP", "tcp": [3389], "default": true, "probes": ["rdp"] },
+			{ "id": "vnc", "name": "VNC", "tcp": [5900, 5901, 5902, 5903], "default": true, "probes": ["ultravnc"] },
+			{ "id": "teamviewer", "name": "TeamViewer", "tcp": [5938], "default": true, "probes": ["teamviewer"] },
+			{ "id": "anydesk", "name": "AnyDesk", "tcp": [7070], "default": true, "probes": ["anydesk"] },
+			{ "id": "rustdesk_server", "name": "RustDesk server", "tcp": [5990, 5991, 21115, 21116], "default": true, "probes": ["rustdeskserver"] },
+			{ "id": "rustdesk_client", "name": "RustDesk client", "tcp": [21118], "default": true, "probes": ["rustdeskclient"] },
+			{ "id": "bigfix", "name": "BigFix remote control", "tcp": [888], "default": true, "probes": ["bigfixremote"] }
 		] },
 		{ "id": "files", "name": "File services", "icon": "🗂️", "items": [
-			{ "id": "smb", "name": "SMB (Windows file sharing)", "tcp": [ 139, 445 ], "default": true }
+			{ "id": "smb", "name": "SMB (Windows file sharing)", "tcp": [139, 445], "default": true }
 		] },
 		{ "id": "cameras", "name": "Cameras", "icon": "📷", "items": [
 			{ "id": "onvif", "name": "ONVIF cameras", "hint": "WS-Discovery for cameras", "available": false, "default": true }
 		] },
 		{ "id": "sql", "name": "SQL databases", "icon": "🗄️", "items": [
-			{ "id": "mssql", "name": "MS-SQL Server", "tcp": [ 1433 ], "default": false },
-			{ "id": "mysql", "name": "MySQL / MariaDB", "tcp": [ 3306 ], "default": false },
-			{ "id": "postgresql", "name": "PostgreSQL", "tcp": [ 5432 ], "default": false },
-			{ "id": "oracle", "name": "Oracle Database", "tcp": [ 1521 ], "default": false }
+			{ "id": "mssql", "name": "MS-SQL Server", "tcp": [1433], "default": false },
+			{ "id": "mysql", "name": "MySQL / MariaDB", "tcp": [3306], "default": false, "probes": ["mysql", "mariadb"] },
+			{ "id": "postgresql", "name": "PostgreSQL", "tcp": [5432], "default": false, "probes": ["postgresql"] },
+			{ "id": "oracle", "name": "Oracle Database", "tcp": [1521], "default": false, "probes": ["oracledb"] }
 		] },
 		{ "id": "nosql", "name": "NoSQL databases", "icon": "📦", "items": [
-			{ "id": "mongodb", "name": "MongoDB", "tcp": [ 27017 ], "default": false },
-			{ "id": "influxdb", "name": "InfluxDB", "tcp": [ 8086 ], "default": false }
+			{ "id": "mongodb", "name": "MongoDB", "tcp": [27017], "default": false, "probes": ["mongodb"] },
+			{ "id": "influxdb", "name": "InfluxDB", "tcp": [8086], "default": false, "probes": ["influxdb2"] }
 		] },
 		{ "id": "industrial", "name": "Industrial protocols", "icon": "🏭", "items": [
-			{ "id": "opcua", "name": "OPC UA", "tcp": [ 4840 ], "default": false },
-			{ "id": "modbus", "name": "Modbus TCP", "tcp": [ 502 ], "default": false },
-			{ "id": "s7", "name": "Siemens S7", "tcp": [ 102, 1020 ], "default": false },
+			{ "id": "opcua", "name": "OPC UA", "tcp": [4840], "default": false },
+			{ "id": "modbus", "name": "Modbus TCP", "tcp": [502], "default": false },
+			{ "id": "s7", "name": "Siemens S7", "tcp": [102, 1020], "default": false },
 			{ "id": "bacnet", "name": "BACnet", "hint": "UDP", "available": false, "default": false },
-			{ "id": "wago", "name": "WAGO", "tcp": [ 6626 ], "default": false },
-			{ "id": "secsgem", "name": "SECS/GEM (HSMS)", "tcp": [ 5000, 5001, 5002 ], "default": false }
+			{ "id": "wago", "name": "WAGO", "tcp": [6626], "default": false },
+			{ "id": "secsgem", "name": "SECS/GEM (HSMS)", "tcp": [5000, 5001, 5002], "default": false }
 		] }
 	]
 }

@@ -22,7 +22,7 @@ WARN    := -std=c11 -D_DEFAULT_SOURCE -Wall -Wextra -Wshadow -Wconversion -Wno-s
 DEFS    := -DMNM_VERSION='"$(VERSION)"'
 
 LIBSRC  := src/targets.c src/ports.c src/json.c src/tcpscan.c src/packets.c src/textdata.c src/devices.c \
-           src/discover.c
+           src/discover.c src/probes.c src/probe_engine.c
 SRC     := src/main.c $(LIBSRC)
 
 .PHONY: all test clean

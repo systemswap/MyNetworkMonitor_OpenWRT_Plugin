@@ -16,6 +16,7 @@
 #include "../src/devices.h"
 #include "../src/json.h"
 #include "../src/packets.h"
+#include "../src/probes.h"
 #include "../src/textdata.h"
 #include "../src/ports.h"
 #include "../src/targets.h"
@@ -379,6 +380,99 @@ static void test_devices_json(void)
 	mnm_devices_free(&devs);
 }
 
+static int ident(const char *id, const void *answer, size_t len)
+{
+	const struct mnm_probe *p = mnm_probe_find(id);
+	if (!p) {
+		fprintf(stderr, "no probe %s\n", id);
+		return -1;
+	}
+	return p->identify(answer, len);
+}
+
+#define T(id, lit) ident(id, lit, sizeof(lit) - 1)
+
+static void test_probes(void)
+{
+	char detail[96];
+
+	/* SSH and FTP: the service speaks first */
+	CHECK(T("ssh", "SSH-2.0-OpenSSH_9.2p1 Debian-2\r\n") == 1);
+	CHECK(T("ssh", "SSH-1.99-old\r\n") == 0);
+	mnm_probe_find("ssh")->describe((const uint8_t *)"SSH-2.0-OpenSSH_9.2p1 Debian-2\r\n", 32, detail, sizeof(detail));
+	CHECK(strcmp(detail, "OpenSSH_9.2p1 Debian-2") == 0);
+	CHECK(T("ftp", "220 FTP server ready\r\n") == 1);
+	CHECK(T("ftp", "220-multi line\r\n") == 0);
+
+	/* MySQL / MariaDB greeting: length 3 bytes, sequence 0, protocol 10, version, zero */
+	static const uint8_t mysql[] = { 0x4a, 0, 0, 0, 0x0a, '8', '.', '0', '.', '3', '6', 0, 1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 0 };
+	static const uint8_t maria[] = { 0x4a, 0, 0, 0, 0x0a, '5', '.', '5', '.', '5', '-', '1', '0', '.', '1', '1', '-', 'M', 'a', 'r', 'i', 'a',
+					 'D', 'B', 0, 1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 0 };
+	CHECK(ident("mysql", mysql, sizeof(mysql)) == 1 && ident("mariadb", mysql, sizeof(mysql)) == 0);
+	CHECK(ident("mariadb", maria, sizeof(maria)) == 1 && ident("mysql", maria, sizeof(maria)) == 0);
+	mnm_probe_find("mariadb")->describe(maria, sizeof(maria), detail, sizeof(detail));
+	CHECK(strcmp(detail, "Version 10.11-MariaDB") == 0);
+
+	/* RDP: TPKT version 3, X.224 connection confirm 0xD0; NLA chosen */
+	static const uint8_t rdp[] = { 0x03, 0x00, 0x00, 0x13, 0x0e, 0xd0, 0, 0, 0x12, 0x34, 0, 0x02, 0, 0x08, 0, 0x02, 0, 0, 0 };
+	CHECK(ident("rdp", rdp, sizeof(rdp)) == 1);
+	mnm_probe_find("rdp")->describe(rdp, sizeof(rdp), detail, sizeof(detail));
+	CHECK(strcmp(detail, "CredSSP (NLA)") == 0);
+	CHECK(T("rdp", "HTTP/1.1 400") == 0);
+
+	CHECK(T("ultravnc", "RFB 003.008\n") == 1 && T("ultravnc", "RF") == 0);
+	CHECK(T("postgresql", "S") == 1 && T("postgresql", "N") == 1 && T("postgresql", "X") == 0);
+	CHECK(T("influxdb2", "HTTP/1.1 200 OK\r\nX-Influxdb-Version: v2.7.1\r\n") == 1);
+	CHECK(T("anydesk", "\x16\x03\x03\0\0...CN=AnyDesk Client...") == 1);
+
+	/* BigFix: exactly these 12 bytes, not more, not less */
+	static const uint8_t bigfix[] = { 0x04, 0x2b, 0xb4, 0x90, 0x05, 0x02, 0, 0, 0, 0, 0, 0, 0 };
+	CHECK(ident("bigfixremote", bigfix, 12) == 1 && ident("bigfixremote", bigfix, 13) == 0 &&
+	      ident("bigfixremote", bigfix, 6) == 0);
+
+	/* TeamViewer: marker at 0 and at 37, at least 41 bytes */
+	uint8_t tv[41] = { 0x17, 0x24, 0x0a, 0x20 };
+	memcpy(tv + 37, "\x11\x30\x36\x00", 4);
+	CHECK(ident("teamviewer", tv, 41) == 1 && ident("teamviewer", tv, 40) == 0);
+
+	/* RustDesk server: 1c aa 01 04 08 <source port 50000 as varint> */
+	static const uint8_t rds[] = { 0x1c, 0xaa, 0x01, 0x04, 0x08, 0xd0, 0x86, 0x03 };
+	CHECK(ident("rustdeskserver", rds, sizeof(rds)) == 1 && ident("rustdeskserver", rds, 7) == 0);
+
+	/* RustDesk client: frame, field 9, ID field */
+	static const uint8_t rdc[] = { 0x1c, 0x4a, 0x05, 0x0a, 0x03, '1', '2', '3' };
+	CHECK(ident("rustdeskclient", rdc, sizeof(rdc)) == 1);
+	static const uint8_t rdc_bad[] = { 0x1c, 0x4b, 0x05, 0x0a, 0x03, '1', '2', '3' };
+	CHECK(ident("rustdeskclient", rdc_bad, sizeof(rdc_bad)) == 0);
+
+	/* Oracle listener: Refuse (4) */
+	CHECK(T("oracledb", "\x00\x08\x00\x00\x04\x00\x00\x00") == 1 && T("oracledb", "\x00\x08\x00\x00\x01\x00\x00\x00") == 0);
+
+	/* DNS over TCP: length, ID 0xAAAA, QR bit */
+	CHECK(T("dns_tcp", "\x00\x30\xaa\xaa\x81\x83") == 1 && T("dns_tcp", "\x00\x30\xaa\xab\x81\x83") == 0 &&
+	      T("dns_tcp", "\x00\x30\xaa\xaa\x01\x00") == 0);
+
+	/* HTTP: status line at the start or <html anywhere; request with the target as Host */
+	CHECK(T("webservices", "HTTP/1.1 200 OK\r\nServer: nginx\r\n") == 1 && T("webservices", "HTTP/1.1 101 Switching") == 0);
+	CHECK(T("webservices", "garbage<HTML><body>") == 1 && T("webservices", "SSH-2.0-x") == 0);
+	mnm_probe_find("webservices")->describe((const uint8_t *)"HTTP/1.1 200 OK\r\nServer: nginx/1.24\r\n\r\n", 39, detail, sizeof(detail));
+	CHECK(strcmp(detail, "nginx/1.24") == 0);
+	uint8_t req[512];
+	size_t n = mnm_probe_find("webservices")->build(ip("192.0.2.10"), req, sizeof(req));
+	CHECK(n == 138 + strlen("192.0.2.10") && memcmp(req, "GET / HTTP/1.1\r\nHost: 192.0.2.10\r\n", 34) == 0);
+
+	/* the case-insensitive search also looks behind NUL bytes */
+	CHECK(mnm_contains_ci((const uint8_t *)"a\0b\0AnYdEsK cLiEnT", 19, "anydesk client") == 1);
+
+	/* no check may read beyond what arrived: every probe on every short answer */
+	uint8_t junk[64];
+	for (size_t i = 0; i < sizeof(junk); i++)
+		junk[i] = (uint8_t)(i * 37 + 11);
+	for (const struct mnm_probe *p = mnm_probes; p->id; p++)
+		for (size_t len = 0; len <= sizeof(junk); len++)
+			p->identify(junk, len);
+}
+
 int main(void)
 {
 	test_ipv4();
@@ -392,6 +486,7 @@ int main(void)
 	test_leases();
 	test_vendors();
 	test_devices_json();
+	test_probes();
 	printf("%d checks, %d failed\n", checks, failures);
 	return failures ? 1 : 0;
 }

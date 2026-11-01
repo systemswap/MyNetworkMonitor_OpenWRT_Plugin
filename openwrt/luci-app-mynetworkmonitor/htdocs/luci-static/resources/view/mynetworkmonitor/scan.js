@@ -56,6 +56,7 @@ const STYLE = `
 .mnm-sub { font-size:85%; opacity:.7; }
 /* At most four services side by side, the rest in further rows. */
 .mnm-chips { display:inline-grid; grid-template-columns:repeat(4, auto); gap:.2em; justify-content:start; }
+.mnm-chip.mnm-guess { opacity:.6; font-style:italic; }
 .mnm-chip { padding:0 .4em; border-radius:3px; background:rgba(11,124,139,.12); font-size:85%; white-space:nowrap; }
 .mnm-mono { font-family:monospace; }
 .mnm-details h4 { margin:1em 0 .3em; font-size:85%; letter-spacing:.05em; opacity:.8; }
@@ -93,8 +94,23 @@ function when(seconds) {
 	return seconds ? new Date(seconds * 1000).toLocaleString() : '-';
 }
 
-function serviceChips(d) {
-	return E('span', { 'class': 'mnm-chips' }, (d.tcp || []).map(p => E('span', { 'class': 'mnm-chip' }, SERVICES[p] || String(p))));
+// The services recognised by their answer. For devices scanned before the
+// probes existed, the usual service of each open port instead, shown paler.
+function serviceChips(d, names) {
+	if (d.services) {
+		// One badge per service, also when it answers on several ports.
+		const byName = new Map();
+		for (const s of d.services) {
+			const name = s.name || names[s.id] || s.id;
+			if (!byName.has(name))
+				byName.set(name, []);
+			byName.get(name).push(s);
+		}
+		return E('span', { 'class': 'mnm-chips' }, Array.from(byName, ([ name, list ]) => E('span', { 'class': 'mnm-chip',
+			'title': list.map(s => '%s %d%s'.format(_('port'), s.port, s.detail ? ' · ' + s.detail : '')).join('\n') }, name)));
+	}
+	return E('span', { 'class': 'mnm-chips' }, (d.tcp || []).map(p => E('span', { 'class': 'mnm-chip mnm-guess',
+		'title': _('port number only, not checked') }, SERVICES[p] || String(p))));
 }
 
 // The open ports in two lines of about the same length.
@@ -131,6 +147,17 @@ return view.extend({
 
 	keyOf(d) {
 		return d.mac || d.ipv4;
+	},
+
+	// Catalog id -> name, for the recognised services.
+	serviceNames() {
+		if (!this.names) {
+			this.names = {};
+			for (const g of (this.catalog?.groups || []))
+				for (const item of g.items)
+					this.names[item.id] = item.name;
+		}
+		return this.names;
 	},
 
 	load() {
@@ -316,7 +343,7 @@ return view.extend({
 				E('td', { 'class': 'td mnm-mono mnm-nowrap' }, d.ipv4 || '-'),
 				E('td', { 'class': 'td mnm-mono mnm-nowrap', 'title': v6.join('\n') }, v6.length ? [ shortV6(v6[0]), v6.length > 1 ? E('span', { 'class': 'mnm-sub' }, ' +' + (v6.length - 1)) : '' ] : '-'),
 				E('td', { 'class': 'td mnm-vendor' }, d.vendor || '-'),
-				E('td', { 'class': 'td' }, serviceChips(d)),
+				E('td', { 'class': 'td' }, serviceChips(d, this.serviceNames())),
 				E('td', { 'class': 'td mnm-mono mnm-nowrap' }, portLines(d)),
 				E('td', { 'class': 'td mnm-nowrap' }, ago(d.last_seen))
 			]));
@@ -356,7 +383,13 @@ return view.extend({
 			return E('div', { 'class': 'cbi-section' }, E('em', {}, _('Select a row to see details')));
 
 		const row = (label, value) => value ? [ E('dt', {}, label), E('dd', {}, value) ] : [];
-		const ports = (d.tcp || []).map(p => E('div', {}, [ E('span', { 'class': 'mnm-mono' }, String(p)), ' ', SERVICES[p] || '' ]));
+		const names = this.serviceNames();
+		const ports = (d.tcp || []).map(p => {
+			const found = (d.services || []).filter(s => s.port == p);
+			return E('div', {}, [ E('span', { 'class': 'mnm-mono' }, String(p)), ' ',
+				found.length ? found.map(s => [ E('strong', {}, s.name || names[s.id] || s.id), s.detail ? E('span', { 'class': 'mnm-sub' }, ' · ' + s.detail) : '' ])
+					: E('span', { 'class': 'mnm-sub' }, d.services ? _('open, not recognised') : (SERVICES[p] || '')) ]);
+		});
 
 		return E('div', { 'class': 'cbi-section' }, [
 			E('h3', { 'style': 'margin-top:0' }, displayName(d)),
@@ -399,6 +432,8 @@ return view.extend({
 		if (s.phase == 'discovery')
 			return E('span', {}, _('Finding devices... %d so far').format(devices));
 		const percent = s.total ? Math.floor(s.done * 100 / s.total) : 0;
+		if (s.phase == 'services')
+			return E('span', {}, _('Recognising services: %d of %d (%d%%)').format(s.done, s.total, percent));
 		return E('span', {}, _('Checking ports: %d of %d (%d%%), %d devices').format(s.done, s.total, percent, devices));
 	},
 

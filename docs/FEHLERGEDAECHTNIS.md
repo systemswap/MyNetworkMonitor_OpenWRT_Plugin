@@ -138,3 +138,15 @@ Regeln:
 - **Im Code:** `htdocs/…/scan.js` (`placeDetails`, Stil `.mnm-details`).
 - **Abgesichert durch:** `tests/ui/check_page.py` – nach dem Scrollen liegt der Name unter der Kopfleiste und der
   Bereich endet im Fenster, bei 1920×1080 und 1366×768.
+
+## Nr. 9 – Seite: nach „Scan this device“ galten alle anderen Geräte als offline
+
+- **Entdeckt:** 01.11.2026, Version 0.0.12-beta (Bildschirmfoto aus dem Maustest: alle Punkte grau). **Behoben:**
+  0.0.13-beta.
+- **Warum:** „Online“ heißt „im letzten Scan gesehen“, und auch ein Scan eines einzelnen Geräts zählte als letzter
+  Scan. Alle Geräte, die er nicht gefragt hatte, galten danach als offline.
+- **Lösung:** Ein Scan, dessen Ziel eine einzelne Adresse ist, setzt den Zeitpunkt des letzten Scans nicht
+  (`single_device`); das gescannte Gerät bekommt trotzdem seine neue Zeit „zuletzt gesehen“.
+- **Nicht tun:** Teil-Scans wie vollständige behandeln, wenn daraus Aussagen über nicht gefragte Geräte folgen.
+- **Im Code:** `root/usr/share/rpcd/ucode/mynetworkmonitor.uc` (`single_device`, `merge_finished_scan`, `status`).
+- **Abgesichert durch:** Ablauf in der VM (Einzelgerät-Scan nach einem vollständigen Scan).

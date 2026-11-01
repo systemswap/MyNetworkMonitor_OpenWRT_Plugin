@@ -107,3 +107,17 @@ Zeitlich geordnet, neue ans Ende.
   Skript `uci-defaults/90-luci-mynetworkmonitor` liest die Vorauswahl mit `jsonfilter`. `services_chosen` merkt sich,
   dass eine Auswahl gespeichert wurde – auch eine leere bleibt leer.
 
+### 01.11.2026 – Dienst-Sonden wie im Desktop-Programm
+
+- **Entschieden:** Die Erkennungspakete sind Byte für Byte die des Desktop-Programms (`scanner/src/probes.c`), auch
+  die Teile, die beliebig aussehen – manche Dienste antworten nur auf genau diese Folge. Die Prüfregeln sind dessen
+  Regeln. Wie dort wird die Antwort genau einmal gelesen (ein `recv` bis 4096 Byte, sobald Daten da sind); Prüfungen
+  wie die von BigFix (genau 12 Byte) hängen davon ab.
+- **Welche Sonde auf welchen Ports:** Der Katalog nennt je Dienst seine Sonden (`probes`), das Backend gibt sie mit den
+  Ports des Dienstes als `--probe id=ports` mit. Ports stehen damit nur im Katalog.
+- **Abweichungen:** Die Web-Sonde prüft nur unverschlüsseltes HTTP; die HTTPS-Prüfung kommt mit TLS (mbedTLS) in
+  Stufe 4. Sie liest ebenfalls einmal, statt bis zum Verbindungsende (ein Server, der die Verbindung offen hält, wird
+  damit erkannt). DNS über TCP fragt einmal statt bis zu dreimal.
+- **Prüfung:** ein lokales Skript vergleicht vor jedem Commit an `probes.c` jedes Array mit dem C#-Quellcode
+  (`docs/PRUEFUNGEN.md`).
+
