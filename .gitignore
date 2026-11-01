@@ -15,3 +15,6 @@ artifacts/
 /scanner/build/
 *.o
 *.apk
+# Kompilierte Python-Dateien (enthalten den Pfad der Quelldatei)
+__pycache__/
+*.pyc
