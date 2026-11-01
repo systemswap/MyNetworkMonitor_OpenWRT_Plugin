@@ -84,6 +84,14 @@ Namens, das ein Extraktor aus dem C#-Quellcode liest, gebaute Pakete aus dem Bui
 Tests in `scanner/tests/tests.c` (je Sonde eine passende und fremde Antworten, alle Prüfungen auf Antworten von 0 bis
 64 Byte unter AddressSanitizer).
 
+### Zusammenführung im Backend
+
+    python3 tests/backend/check_merge.py <adresse des routers> [ssh-optionen]
+
+Spielt erfundene Scans (Adressen aus dem Dokumentationsbereich) dort ein, wo das Scanprogramm sein Ergebnis schreibt,
+fragt das Backend nach dem Stand und vergleicht den Bestand. Bestand und letzter Scan des Routers werden vorher
+gesichert und danach zurückgespielt.
+
 ### Bedienung wie ein Nutzer (Maustest)
 
     python3 tests/ui/check_page.py <adresse des routers> <datei mit dem root-passwort>
@@ -112,3 +120,4 @@ nicht). Vorher prüfen, dass die Geräteliste nicht leer ist; sonst ein Gerät m
 | 01.11.2026 | 0.0.21-beta | Stufe 3b, TCP: 16 Pakete identisch; 200 Prüfungen grün, darunter vollständige Läufe gegen nachgespielte Geräte (S7 mit Steckplatzsuche und Kennung, Modbus mit Geräte-ID, WAGO, SECS/GEM mit Separate.req); im Heimnetz keine Fehlerkennung (SECS/GEM auf den Webports 5000/5001 eines NAS) |
 | 01.11.2026 | 0.0.22-beta | Stufe 3b, UDP: 5 Pakete identisch; 222 Prüfungen grün (Läufe gegen nachgespielten Namensserver, BACnet-Gerät, SQL-Server-Browser, geschlossenen Port); im Heimnetz: DNS über UDP an Gateway, NAS und VM, DHCP-Server am Gateway erkannt, kein BACnet oder MS-SQL fälschlich; Maustest ohne Befund, Details zeigen „53/udp“ |
 | 01.11.2026 | 0.0.23-beta | SMB-Versionen: 6 Pakete identisch (3.1.1 mit Verhandlungsangabe, wie Desktop 7.3.0.35); 228 Prüfungen grün (nachgespielter Dateiserver nimmt 3.1.1 nur mit Verhandlungsangabe an); im Heimnetz an zwei Geräten 2.0.2 bis 3.1.1 erkannt, 1.0 abgeschaltet. Maustest auf Wunsch des Nutzers zurückgestellt bis zum Abschluss der Stufe |
+| 01.11.2026 | 0.0.24-beta | Zusammenführung im Backend: `check_merge.py` mit altem Stand 4 Fehler, mit neuem ohne Befund; Bestand des Routers danach unverändert |

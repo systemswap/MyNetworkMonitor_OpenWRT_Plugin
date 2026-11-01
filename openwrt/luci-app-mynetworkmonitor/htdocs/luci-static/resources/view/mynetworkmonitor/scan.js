@@ -178,11 +178,14 @@ function ipOrder(a, b) {
 }
 
 return view.extend({
-	selected: null,     // key of the selected device (MAC, else IPv4)
+	selected: null,     // key of the selected device (keyOf)
 	status: null,
 
+	// Address and MAC together: several addresses can share one MAC address
+	// (a router with several addresses, the devices behind a WLAN repeater),
+	// and one address can have been used by two devices.
 	keyOf(d) {
-		return d.mac || d.ipv4;
+		return (d.ipv4 || '') + '/' + (d.mac || '');
 	},
 
 	// Catalog id -> name, for the recognised services.

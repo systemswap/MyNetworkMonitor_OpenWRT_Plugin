@@ -117,23 +117,49 @@ function union(a, b, limit) {
 	return out;
 }
 
-// The stored device a scanned one belongs to: same MAC address, or the same
-// IPv4 address for an entry that has no MAC address yet (seen by ping only).
-function find_device(devices, d) {
+// Whether a scan covered only one device ("Scan this device"). Such a scan
+// must not decide which devices count as online: all others were not asked
+// (docs/FEHLERGEDAECHTNIS.md, No. 9).
+function single_device(scan) {
+	return match(scan.targets ?? '', IPV4_PATTERN) != null;
+}
+
+// The stored device a scanned one belongs to (docs/FEHLERGEDAECHTNIS.md, No. 15):
+//  1. the same IPv4 address with the same MAC address, or one of both unknown;
+//  2. a device that changed its address (DHCP): the same MAC address under an
+//     address this scan did not see - but only if the MAC address belongs to a
+//     single address in this scan. Several addresses with one MAC address are
+//     a router with several addresses or the devices behind a WLAN repeater,
+//     which answers ARP for them with its own MAC address; merging those would
+//     leave one row for all of them. A scan of a single device cannot tell
+//     this, so it never moves a device.
+// Otherwise the device is new - also where a different device now has the
+// address of an old one: that one stays, as not seen.
+function find_device(devices, d, seen) {
 	for (let s in devices)
-		if (d.mac != null && s.mac == d.mac)
+		if (s.ipv4 == d.ipv4 && s.mac == d.mac)
 			return s;
 	for (let s in devices)
 		if (s.ipv4 == d.ipv4 && (s.mac == null || d.mac == null))
 			return s;
+	if (seen.moves && d.mac != null && seen.macs[d.mac] == 1)
+		for (let s in devices)
+			if (s.mac == d.mac && !seen.addresses[s.ipv4])
+				return s;
 	return null;
 }
 
 // Merges one scan into a copy of the list. "when" is the time the devices were seen.
 function merge(store, scan, when) {
 	const devices = map(store.devices, s => ({ ...s }));
+	const seen = { addresses: {}, macs: {}, moves: !single_device(scan) };
 	for (let d in scan.devices) {
-		let s = find_device(devices, d);
+		seen.addresses[d.ipv4] = true;
+		if (d.mac != null)
+			seen.macs[d.mac] = (seen.macs[d.mac] ?? 0) + 1;
+	}
+	for (let d in scan.devices) {
+		let s = find_device(devices, d, seen);
 		if (s == null) {
 			s = { first_seen: when, tcp: [], ipv6: [], seen_by: [] };
 			push(devices, s);
@@ -169,13 +195,6 @@ function merge(store, scan, when) {
 		s.last_seen = when;
 	}
 	return { ...store, devices: devices };
-}
-
-// Whether a scan covered only one device ("Scan this device"). Such a scan
-// must not decide which devices count as online: all others were not asked
-// (docs/FEHLERGEDAECHTNIS.md, No. 9).
-function single_device(scan) {
-	return match(scan.targets ?? '', IPV4_PATTERN) != null;
 }
 
 // Merges a finished scan into the stored list, once per scan.

@@ -241,3 +241,23 @@ Regeln:
 - **Im Code:** `.gitignore`.
 - **Abgesichert durch:** `.gitignore`; Durchsicht der Dateiliste der Historie vor jedem ersten Push (`Regeln/GitHub.md`
   der gemeinsamen Vorlage, Schritt 2).
+
+## Nr. 15 – Backend: Geräte mit gemeinsamer MAC-Adresse fielen im Bestand zu einer Zeile zusammen
+
+- **Entdeckt:** 01.11.2026, Version 0.0.23-beta (Nutzer: das Gateway fehlte
+  nach einem Scan in der Tabelle). **Behoben:** 0.0.24-beta.
+- **Was:** Der Scan fand 30 Geräte, die Tabelle zeigte 24. Sieben Adressen hatten dieselbe MAC-Adresse: der Router
+  mit zwei Adressen und die Geräte hinter seinem WLAN bzw. einem Repeater, der ARP für sie mit seiner eigenen
+  MAC-Adresse beantwortet. Im Bestand blieb davon eine Zeile, mit der zuletzt verarbeiteten Adresse.
+- **Warum:** Das Backend ordnete jedes gescannte Gerät dem gespeicherten mit derselben MAC-Adresse zu – gedacht für
+  Geräte, die per DHCP eine neue Adresse bekommen. Dass mehrere Adressen eine MAC-Adresse teilen, war nicht bedacht;
+  auch die Seite unterschied Zeilen an der MAC-Adresse.
+- **Lösung:** Zugeordnet wird über Adresse und MAC-Adresse zusammen. Eine Zeile wandert nur dann zu einer neuen
+  Adresse, wenn die MAC-Adresse im Scan genau einmal vorkommt und die alte Adresse im Scan fehlt – und nie bei einem
+  Einzelgerät-Scan, der das nicht sehen kann. Nutzt ein anderes Gerät eine alte Adresse, bekommt es eine eigene Zeile.
+  Die Seite nimmt Adresse und MAC-Adresse als Schlüssel einer Zeile.
+- **Nicht tun:** die MAC-Adresse allein als Kennung eines Geräts nehmen.
+- **Im Code:** `root/usr/share/rpcd/ucode/mynetworkmonitor.uc` (`find_device`, `merge`), `htdocs/…/scan.js` (`keyOf`).
+- **Abgesichert durch:** `tests/backend/check_merge.py` (gegen das Backend eines Routers: Router mit zwei Adressen
+  und Gerät dahinter, Adresswechsel per DHCP, Einzelgerät-Scan, neues Gerät auf alter Adresse; mit dem alten Code
+  alle vier fehlgeschlagen).
