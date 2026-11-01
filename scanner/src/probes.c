@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "probes_steps.h"
 #include "targets.h"
 
 /* ------------------------------------------------------------- helpers */
@@ -541,6 +542,9 @@ const struct mnm_probe mnm_probes[] = {
 const struct mnm_probe *mnm_probe_find(const char *id)
 {
 	for (const struct mnm_probe *p = mnm_probes; p->id; p++)
+		if (strcmp(p->id, id) == 0)
+			return p;
+	for (const struct mnm_probe *p = mnm_probes_steps; p->id; p++)
 		if (strcmp(p->id, id) == 0)
 			return p;
 	return NULL;

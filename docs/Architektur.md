@@ -122,7 +122,7 @@ Zeitlich geordnet, neue ans Ende.
   damit erkannt). DNS über TCP fragt einmal statt bis zu dreimal.
 - **Prüfung:** ein lokales Skript vergleicht vor jedem Commit an `probes.c` jedes Array mit dem C#-Quellcode
   (`docs/PRUEFUNGEN.md`).
-- **Sonden mit mehreren Schritten** (eigene Prozedur `run` in `probes.c`) laufen vor den Sonden mit einem Gruß in
+- **Sonden mit mehreren Schritten** (eigene Prozedur `run`, für Datenbanken und Steuerungen in `probes_steps.c`) laufen vor den Sonden mit einem Gruß in
   höchstens 16 Threads mit kleinem Stapel (128 KiB); jede wartet blockierend mit eigenen Zeitgrenzen (`netio.c`).
   Fundmeldungen und Fortschritt laufen unter einer Sperre, weil sie die Geräteliste ändern und Dateien schreiben.
 
@@ -161,4 +161,24 @@ Zeitlich geordnet, neue ans Ende.
   Browser und werden nicht gespeichert. Ein unfertiges Portfeld (`80-`) wird rot umrandet und filtert nichts.
 - **Nicht übernommen** aus dem Desktop-Programm: Auswahl nach Dienst und Bereich als Klappliste, IPv4/IPv6-Schalter,
   Doppelte – auf dem Router reichen Suchfeld (findet auch Dienstnamen) und Gruppierung nach Netz.
+
+### 01.11.2026 – Sonden für Steuerungen und MS-SQL (Stufe 3b, TCP)
+
+- **Entschieden:** MS-SQL, OPC UA, S7, Modbus, WAGO und SECS/GEM folgen dem Ablauf des Desktop-Programms Schritt für
+  Schritt, mit denselben Paketen. Die Pakete stehen in `scanner/src/probes_steps.c`; ein Skript im lokalen Testordner
+  liest sie aus dem C#-Quellcode und vergleicht sie vor jedem Commit (`docs/PRUEFUNGEN.md`). Gebaute Pakete entstehen
+  aus diesen Vorlagen: die S7-Verbindungsanfrage mit Verbindungsart und Rack/Steckplatz in den letzten zwei Bytes, die
+  Modbus-Registerabfrage mit Register und Anzahl in den Bytes 8 bis 11.
+- **S7:** Bestätigt die Steuerung die übliche Anfrage (PG, Rack 0, Steckplatz 2) nicht, sucht die Sonde den
+  Steckplatz: erst 23 übliche, dann – nur wenn die Steuerung ablehnt statt zu schweigen – alle 744 übrigen, höchstens
+  5 s, je sechs gleichzeitig. Gewinner ist die erste bestätigte in der Reihenfolge der Liste. Danach Bestellnummer,
+  Firmware und Namen aus den Systemzustandslisten 0x0011 und 0x001C.
+- **SECS/GEM:** Eine angenommene Sitzung wird mit Separate.req wieder beendet; die Anlage erlaubt nur eine, und die
+  gehört ihrem Leitrechner. S1F13 (Establish Communication) wird nie gesendet – es versetzt Anlagen in den
+  Kommunikationszustand.
+- **Abweichungen:** Ein Versuch je Sonde statt bis zu drei. Die S7-Suche hört nach der ersten Sechsergruppe mit einer
+  Bestätigung auf, statt alle Anfragen zu senden (gleiches Ergebnis, weniger Verbindungen). Noch nicht übernommen, weil
+  nur für die Details: OPC-UA-Endpunkte (die Anfragen enthalten Zeitstempel und Kanalnummern der Laufzeit),
+  SECS/GEM-Abfrage von Modell und Softwarestand (S1F1) und das Warten auf die Selbstvorstellung der Anlage. Die
+  Rückfrage beim SQL-Server-Browser (UDP 1434) kommt mit den UDP-Sonden.
 

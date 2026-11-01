@@ -37,7 +37,7 @@
 			{ "id": "onvif", "name": "ONVIF cameras", "hint": "WS-Discovery for cameras", "available": false, "default": true }
 		] },
 		{ "id": "sql", "name": "SQL databases", "icon": "🗄️", "items": [
-			{ "id": "mssql", "name": "MS-SQL Server", "tcp": [1433], "default": false },
+			{ "id": "mssql", "name": "MS-SQL Server", "tcp": [1433], "default": false, "probes": ["mssqlserver"] },
 			{ "id": "mysql", "name": "MySQL / MariaDB", "tcp": [3306], "default": false, "probes": ["mysql", "mariadb"] },
 			{ "id": "postgresql", "name": "PostgreSQL", "tcp": [5432], "default": false, "probes": ["postgresql"] },
 			{ "id": "oracle", "name": "Oracle Database", "tcp": [1521], "default": false, "probes": ["oracledb"] }
@@ -47,12 +47,12 @@
 			{ "id": "influxdb", "name": "InfluxDB", "tcp": [8086], "default": false, "probes": ["influxdb2"] }
 		] },
 		{ "id": "industrial", "name": "Industrial protocols", "icon": "🏭", "items": [
-			{ "id": "opcua", "name": "OPC UA", "tcp": [4840], "default": false },
-			{ "id": "modbus", "name": "Modbus TCP", "tcp": [502], "default": false },
-			{ "id": "s7", "name": "Siemens S7", "tcp": [102, 1020], "default": false },
+			{ "id": "opcua", "name": "OPC UA", "tcp": [4840], "default": false, "probes": ["opcua"] },
+			{ "id": "modbus", "name": "Modbus TCP", "tcp": [502], "default": false, "probes": ["modbus"] },
+			{ "id": "s7", "name": "Siemens S7", "tcp": [102, 1020], "default": false, "probes": ["s7"] },
 			{ "id": "bacnet", "name": "BACnet", "hint": "UDP", "available": false, "default": false },
-			{ "id": "wago", "name": "WAGO", "tcp": [6626], "default": false },
-			{ "id": "secsgem", "name": "SECS/GEM (HSMS)", "tcp": [5000, 5001, 5002], "default": false }
+			{ "id": "wago", "name": "WAGO", "tcp": [6626], "default": false, "probes": ["wago"] },
+			{ "id": "secsgem", "name": "SECS/GEM (HSMS)", "tcp": [5000, 5001, 5002], "default": false, "probes": ["secsgem"] }
 		] }
 	]
 }

@@ -12,7 +12,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define MNM_DETAIL_LEN 96
+/* Length of the detail a probe reports, including the terminating NUL; long
+ * enough for the identification of a controller (order number, firmware, name). */
+#define MNM_DETAIL_LEN 160
 
 struct mnm_probe {
 	const char *id;            /* catalog id, e.g. "ssh" */

@@ -31,6 +31,14 @@ int mnm_send_all(int fd, const void *data, size_t len, int timeout_ms);
  * peer closed, -1 on error, -2 on timeout. */
 ssize_t mnm_recv_once(int fd, void *buf, size_t cap, int timeout_ms);
 
+/* Reads exactly len bytes, waiting at most until the monotonic time deadline_ms
+ * (see mnm_now_ms). Returns 0 on success, -1 if the peer closed or an error
+ * occurred, -2 on timeout. */
+int mnm_recv_exact(int fd, void *buf, size_t len, int64_t deadline_ms);
+
+/* Monotonic time in milliseconds, for deadlines. */
+int64_t mnm_now_ms(void);
+
 /* A UDP socket connected to address:port, so that it only receives from there;
  * -1 on error. */
 int mnm_udp_socket(uint32_t address, uint16_t port);

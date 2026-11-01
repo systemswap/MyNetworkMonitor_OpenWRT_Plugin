@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <netinet/in.h>
 
+#include "probes.h"
+
 #define MNM_MAX_IPV6 8
 #define MNM_MAX_SERVICES 16
 #define MNM_NAME_LEN 64
@@ -32,7 +34,7 @@ struct mnm_service {
 	const char *id;          /* probe id, a static string of the probe table */
 	const char *name;        /* its display name, also static */
 	uint16_t port;
-	char detail[96];
+	char detail[MNM_DETAIL_LEN];
 };
 
 struct mnm_device {

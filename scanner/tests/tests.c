@@ -19,24 +19,17 @@
 #include "../src/json.h"
 #include "../src/packets.h"
 #include "../src/probes.h"
+#include "../src/probes_steps.h"
 #include "../src/textdata.h"
 #include "../src/ports.h"
 #include "../src/targets.h"
 #include "../src/discover.h"
 #include "../src/tcpscan.h"
+#include "check.h"
 
-static int failures, checks;
+int failures, checks;
 
-#define CHECK(cond)                                                                 \
-	do {                                                                        \
-		checks++;                                                           \
-		if (!(cond)) {                                                      \
-			failures++;                                                 \
-			fprintf(stderr, "%s:%d: CHECK(%s) failed\n", __FILE__, __LINE__, #cond); \
-		}                                                                   \
-	} while (0)
-
-static uint32_t ip(const char *text)
+uint32_t ip(const char *text)
 {
 	uint32_t value = 0;
 	mnm_parse_ipv4(text, strlen(text), &value);
@@ -204,7 +197,7 @@ static void collect_progress(void *context, uint64_t done, uint64_t total)
 }
 
 /* Opens a listening socket on 127.0.0.1 with a free port chosen by the system. */
-static int listen_local(uint16_t *port)
+int listen_local(uint16_t *port)
 {
 	struct sockaddr_in sa = { .sin_family = AF_INET, .sin_addr.s_addr = htonl(0x7f000001u) };
 	socklen_t len = sizeof(sa);
@@ -527,6 +520,9 @@ static void test_probes(void)
 	for (const struct mnm_probe *p = mnm_probes; p->id; p++)
 		for (size_t len = 0; len <= sizeof(junk); len++)
 			p->identify(junk, len);
+	for (const struct mnm_probe *p = mnm_probes_steps; p->id; p++)
+		for (size_t len = 0; len <= sizeof(junk); len++)
+			p->identify(junk, len);
 }
 
 int main(void)
@@ -544,6 +540,7 @@ int main(void)
 	test_devices_json();
 	test_probes();
 	test_dns_names();
+	test_probes_steps();
 	printf("%d checks, %d failed\n", checks, failures);
 	return failures ? 1 : 0;
 }

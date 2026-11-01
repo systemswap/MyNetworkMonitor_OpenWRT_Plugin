@@ -11,7 +11,7 @@
 #include <time.h>
 #include <unistd.h>
 
-static int64_t now_ms(void)
+int64_t mnm_now_ms(void)
 {
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -67,10 +67,10 @@ enum mnm_connect_result mnm_tcp_connect(uint32_t address, uint16_t port, int tim
 int mnm_send_all(int fd, const void *data, size_t len, int timeout_ms)
 {
 	const uint8_t *p = data;
-	int64_t end = now_ms() + timeout_ms;
+	int64_t end = mnm_now_ms() + timeout_ms;
 
 	while (len > 0) {
-		int64_t left = end - now_ms();
+		int64_t left = end - mnm_now_ms();
 		struct pollfd pf = { .fd = fd, .events = POLLOUT };
 		if (left <= 0 || poll(&pf, 1, (int)left) <= 0)
 			return -1;
@@ -98,6 +98,36 @@ ssize_t mnm_recv_once(int fd, void *buf, size_t cap, int timeout_ms)
 	if (n < 0)
 		return (errno == EAGAIN || errno == EWOULDBLOCK) ? -2 : -1;
 	return n;
+}
+
+int mnm_recv_exact(int fd, void *buf, size_t len, int64_t deadline_ms)
+{
+	uint8_t *p = buf;
+	while (len > 0) {
+		int64_t left = deadline_ms - mnm_now_ms();
+		if (left <= 0)
+			return -2;
+		struct pollfd pf = { .fd = fd, .events = POLLIN };
+		int r = poll(&pf, 1, (int)left);
+		if (r == 0)
+			return -2;
+		if (r < 0) {
+			if (errno == EINTR)
+				continue;
+			return -1;
+		}
+		ssize_t n = recv(fd, p, len, MSG_DONTWAIT);
+		if (n == 0)
+			return -1;
+		if (n < 0) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+				continue;
+			return -1;
+		}
+		p += n;
+		len -= (size_t)n;
+	}
+	return 0;
 }
 
 int mnm_udp_socket(uint32_t address, uint16_t port)
