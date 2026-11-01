@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyNetworkMonitor für OpenWrt – welche Datei für welches Gerät?</title>
+<!-- Everything is in this file: no fonts, scripts or styles from the internet. -->
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #ffffff; --text: #1d2b33; --muted: #5d6d75; --line: #dde4e8;
+    --accent: #0b7c8b; --accent-soft: #e2f2f4; --chip: #eef2f5; --mark: #fff1b8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12191d; --card: #1b2429; --text: #e3eaee; --muted: #93a3ab; --line: #2c383e;
+      --accent: #4fc0cf; --accent-soft: #1d3a3f; --chip: #26323a; --mark: #5c4c12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 20px 48px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  .lead { color: var(--muted); margin: 0 0 24px; }
+  .both { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .both div { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .both b { display: block; margin-bottom: 4px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px;
+         background: var(--chip); padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+  .search { width: 100%; padding: 11px 14px; font-size: 15px; border: 1px solid var(--line); border-radius: 10px;
+            background: var(--card); color: var(--text); margin-bottom: 20px; }
+  .search:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 18px;
+          overflow: hidden; }
+  .card header { background: var(--accent-soft); padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .card header .file { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px;
+                       font-weight: 600; color: var(--accent); word-break: break-all; }
+  .card header .for { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .row { display: grid; grid-template-columns: 260px 1fr; gap: 16px; padding: 12px 18px; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: none; }
+  .chip-set .name { font-weight: 600; }
+  .chip-set .target { color: var(--muted); font-size: 13px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .devices { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
+  .devices span { background: var(--chip); border-radius: 6px; padding: 3px 9px; font-size: 14px; }
+  .devices span.hit { background: var(--mark); }
+  .note { background: var(--card); border-left: 4px solid var(--accent); border-radius: 8px; padding: 12px 16px;
+          margin: 8px 0 18px; }
+  .none { display: none; color: var(--muted); text-align: center; padding: 20px; }
+  footer { color: var(--muted); font-size: 13px; margin-top: 28px; }
+  @media (max-width: 720px) {
+    .both { grid-template-columns: 1fr; }
+    .row { grid-template-columns: 1fr; gap: 8px; }
+    code { white-space: normal; word-break: break-all; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Welche Datei für welches Gerät?</h1>
+  <p class="lead">MyNetworkMonitor für OpenWrt 25.12 – jeder Router braucht zwei Dateien aus dem Release.</p>
+
+  <div class="both">
+    <div><b>Die Seite – für jedes Gerät gleich</b><code>luci-app-mynetworkmonitor_…_all.apk</code></div>
+    <div><b>Der Scanner – passend zum Chipsatz</b><code>mynetworkmonitor-scan_…_&lt;architektur&gt;.apk</code></div>
+  </div>
+
+  <input class="search" id="search" type="search" placeholder="Gerät suchen, z. B. MX4200, Raspberry Pi 4, FRITZ!Box …" autocomplete="off">
+
+  <section class="card">
+    <header>
+      <div class="file">mynetworkmonitor-scan_…_aarch64_cortex-a53.apk</div>
+      <div class="for">Linksys MX4200, viele aktuelle WLAN-Router mit Qualcomm oder MediaTek, Raspberry Pi 3 (64 Bit)</div>
+    </header>
+    <div class="row"><div class="chip-set"><div class="name">Qualcomm IPQ807x / IPQ8174</div><div class="target">qualcommax/ipq807x</div></div>
+      <div class="devices"><span>Linksys MX4200 v1/v2</span><span>Linksys MX5300</span><span>Dynalink DL-WRX36</span><span>Xiaomi AX3600</span><span>Xiaomi AX9000</span><span>QNAP 301w</span></div></div>
+    <div class="row"><div class="chip-set"><div class="name">Qualcomm IPQ60xx</div><div class="target">qualcommax/ipq60xx</div></div>
+      <div class="devices"><span>GL.iNet GL-AX1800</span><span>GL.iNet GL-AXT1800</span><span>Linksys MR7350</span></div></div>
+    <div class="row"><div class="chip-set"><div class="name">MediaTek Filogic (MT7981, MT7986, MT7988)</div><div class="target">mediatek/filogic</div></div>
+      <div class="devices"><span>OpenWrt One</span><span>GL.iNet GL-MT3000</span><span>GL.iNet GL-MT6000</span><span>Xiaomi Mi Router AX3000T</span><span>Cudy WR3000</span><span>ASUS TUF-AX4200</span><span>Zyxel EX5601-T0</span><span>Bananapi BPi-R3</span><span>Bananapi BPi-R4</span></div></div>
+    <div class="row"><div class="chip-set"><div class="name">MediaTek MT7622</div><div class="target">mediatek/mt7622</div></div>
+      <div class="devices"><span>Linksys E8450</span><span>Belkin RT3200</span><span>Bananapi BPi-R64</span></div></div>
+    <div class="row"><div class="chip-set"><div class="name">Marvell Armada 3700</div><div class="target">mvebu/cortexa53</div></div>
+      <div class="devices"><span>Marvell ESPRESSObin</span><span>CZ.NIC Turris MOX</span></div></div>
+    <div class="row"><div class="chip-set"><div class="name">Broadcom BCM2837 – 64 Bit</div><div class="target">bcm27xx/bcm2710</div></div>
+      <div class="devices"><span>Raspberry Pi 3A+ / 3B / 3B+ / CM3 (64 Bit)</span><span>Raspberry Pi Zero 2 / Zero 2 W (64 Bit)</span><span>Raspberry Pi 2B 1.2 (64 Bit)</span></div></div>
+  </section>
+
+  <section class="card">
+    <header>
+      <div class="file">mynetworkmonitor-scan_…_aarch64_cortex-a72.apk</div>
+      <div class="for">Raspberry Pi 4 (64 Bit), einige Marvell-Boards</div>
+    </header>
+    <div class="row"><div class="chip-set"><div class="name">Broadcom BCM2711</div><div class="target">bcm27xx/bcm2711</div></div>
+      <div class="devices"><span>Raspberry Pi 4B (64 Bit)</span><span>Raspberry Pi 400 (64 Bit)</span><span>Raspberry Pi CM4 (64 Bit)</span></div></div>
+    <div class="row"><div class="chip-set"><div class="name">Marvell Armada 7k/8k, CN913x</div><div class="target">mvebu/cortexa72</div></div>
+      <div class="devices"><span>SolidRun MACCHIATObin</span><span>SolidRun ClearFog GT-8K</span></div></div>
+  </section>
+
+  <section class="card">
+    <header>
+      <div class="file">mynetworkmonitor-scan_…_aarch64_cortex-a76.apk</div>
+      <div class="for">Raspberry Pi 5</div>
+    </header>
+    <div class="row"><div class="chip-set"><div class="name">Broadcom BCM2712</div><div class="target">bcm27xx/bcm2712</div></div>
+      <div class="devices"><span>Raspberry Pi 5</span><span>Raspberry Pi 500</span><span>Raspberry Pi CM5</span></div></div>
+  </section>
+
+  <section class="card">
+    <header>
+      <div class="file">mynetworkmonitor-scan_…_arm_cortex-a7_neon-vfpv4.apk</div>
+      <div class="for">FRITZ!Box 7530 und andere IPQ40xx-Router, Raspberry Pi mit 32-Bit-Abbild</div>
+    </header>
+    <div class="row"><div class="chip-set"><div class="name">Qualcomm IPQ40xx</div><div class="target">ipq40xx/generic</div></div>
+      <div class="devices"><span>AVM FRITZ!Box 7530</span><span>AVM FRITZ!Box 4040</span><span>GL.iNet GL-B1300</span><span>Linksys EA6350 v3</span><span>ASUS RT-AC58U</span><span>Zyxel NBG6617</span></div></div>
+    <div class="row"><div class="chip-set"><div class="name">Broadcom BCM2836 / 2837 / 2711 – 32 Bit</div><div class="target">bcm27xx/bcm2709</div></div>
+      <div class="devices"><span>Raspberry Pi 2B (32 Bit)</span><span>Raspberry Pi 3 / Zero 2 (32 Bit)</span><span>Raspberry Pi 4B / 400 / CM4 (32 Bit)</span></div></div>
+    <div class="row"><div class="chip-set"><div class="name">MediaTek MT7623</div><div class="target">mediatek/mt7623</div></div>
+      <div class="devices"><span>Bananapi BPi-R2</span><span>UniElec U7623-02</span></div></div>
+    <div class="row"><div class="chip-set"><div class="name">Allwinner A20, H3 u. a.</div><div class="target">sunxi/cortexa7</div></div>
+      <div class="devices"><span>LeMaker Banana Pi</span><span>Bananapi BPi-R1</span><span>Xunlong Orange Pi PC</span><span>Xunlong Orange Pi One</span></div></div>
+  </section>
+
+  <p class="none" id="none">Kein Gerät gefunden – siehe unten, wie man die Architektur selbst herausfindet.</p>
+
+  <div class="note">
+    <b>Raspberry Pi:</b> Es zählt das installierte OpenWrt-Abbild. Mit dem 32-Bit-Abbild braucht auch ein Pi 3 oder
+    Pi 4 die Datei <code>…_arm_cortex-a7_neon-vfpv4.apk</code>.
+  </div>
+  <div class="note">
+    <b>Gerät nicht dabei?</b> In der Firmware-Auswahl von OpenWrt (firmware-selector.openwrt.org) steht zu jedem Gerät
+    sein Ziel, z. B. <code>qualcommax/ipq807x</code>. Oder per SSH auf dem Router: <code>apk --print-arch</code>.
+    Für weitere Chipsätze kann der Scanner gebaut werden – OpenWrt kennt 35 Paketarchitekturen.
+  </div>
+  <div class="note">
+    <b>Voraussetzung:</b> OpenWrt 25.12.x – ältere Versionen nutzen ein anderes Paketformat. Installation: siehe
+    <code>ANLEITUNG.txt</code>.
+  </div>
+
+  <footer>Alle Geräte stehen so in den offiziellen Gerätelisten von OpenWrt 25.12.6. Die Liste ist ein Auszug.</footer>
+</main>
+<script>
+  // Filters the devices as one types; a chip set without a matching device and a file without one disappear.
+  const search = document.getElementById('search');
+  search.addEventListener('input', () => {
+    const term = search.value.trim().toLowerCase();
+    let any = false;
+    document.querySelectorAll('.card').forEach(card => {
+      let cardHit = false;
+      card.querySelectorAll('.row').forEach(row => {
+        const rowText = row.querySelector('.chip-set').textContent.toLowerCase();
+        let rowHit = !term || rowText.includes(term);
+        row.querySelectorAll('.devices span').forEach(s => {
+          const hit = term && s.textContent.toLowerCase().includes(term);
+          s.classList.toggle('hit', !!hit);
+          rowHit = rowHit || hit;
+        });
+        row.style.display = rowHit ? '' : 'none';
+        cardHit = cardHit || rowHit;
+      });
+      card.style.display = cardHit ? '' : 'none';
+      any = any || cardHit;
+    });
+    document.getElementById('none').style.display = any ? 'none' : 'block';
+  });
+</script>
+</body>
+</html>

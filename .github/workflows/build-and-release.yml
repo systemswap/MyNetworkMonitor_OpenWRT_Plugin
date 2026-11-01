@@ -57,7 +57,7 @@ jobs:
             build=true
           else
             for file in $(for a in $archs; do echo "mynetworkmonitor-scan_${version}_${a}.apk"; done) \
-                        ANLEITUNG.txt GERAETE.md LICENSE THIRD-PARTY-NOTICES.md SHA256SUMS; do
+                        ANLEITUNG.txt GERAETE.html LICENSE THIRD-PARTY-NOTICES.md SHA256SUMS; do
               if ! printf '%s\n' "$assets" | grep -qx "$file"; then
                 echo "Release v$version lacks $file."
                 build=true
@@ -164,7 +164,7 @@ jobs:
 
       - name: Instructions, licence and checksums
         run: |
-          cp packaging/ANLEITUNG.txt packaging/GERAETE.md LICENSE THIRD-PARTY-NOTICES.md dist/
+          cp packaging/ANLEITUNG.txt packaging/GERAETE.html LICENSE THIRD-PARTY-NOTICES.md dist/
           cd dist && sha256sum *.apk > SHA256SUMS && ls -la
 
       # The release text is the message of the commit that set this version (also when a later run only adds
@@ -178,7 +178,7 @@ jobs:
             echo 'body<<RELEASE_NOTES_EOF'
             printf '%s\n\n' "$short"
             echo "Packages for OpenWrt $OPENWRT_RELEASE (apk). Pick mynetworkmonitor-scan for the architecture of the router"
-            echo "(apk --print-arch on the router; devices and chipsets: GERAETE.md) and luci-app-mynetworkmonitor;"
+            echo "(apk --print-arch on the router; devices and chipsets: GERAETE.html) and luci-app-mynetworkmonitor;"
             echo "installation: ANLEITUNG.txt."
             echo 'RELEASE_NOTES_EOF'
           } >> "$GITHUB_OUTPUT"

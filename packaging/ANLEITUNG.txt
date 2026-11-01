@@ -6,7 +6,7 @@ Für Router mit OpenWrt 25.12.x. Es gibt zwei Pakete:
   - mynetworkmonitor-scan_..._<architektur>.apk     der Scanner, passend zum Router
 
 Welche Architektur hat der Router?
-  - in GERAETE.md nachsehen: Beispielgeräte mit Chipsatz und passender Datei
+  - in GERAETE.html nachsehen (im Browser öffnen): Beispielgeräte mit Chipsatz und passender Datei
   - per SSH:  apk --print-arch   (z. B. aarch64_cortex-a53 beim Linksys MX4200)
   - ohne SSH: das Modell in der Geräteliste von OpenWrt (Table of Hardware,
     https://openwrt.org/toh/start) nachschlagen; auf der Seite des Geräts

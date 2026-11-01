@@ -15,7 +15,7 @@ Für OpenWrt 25.12 und neuer, auf allen Prozessorarten, für die OpenWrt Pakete 
 
 Die Pakete stehen unter *Releases* dieses Repositorys – zunächst für `aarch64_cortex-a53` (z. B. Linksys MX4200,
 Raspberry Pi 3 mit 64 Bit), `arm_cortex-a7_neon-vfpv4` (Raspberry Pi 2/3 mit 32 Bit), `aarch64_cortex-a72`
-(Raspberry Pi 4) und `aarch64_cortex-a76` (Raspberry Pi 5); weitere Prozessorarten folgen nach den ersten Tests. Welche Datei zu welchem Gerät passt: `packaging/GERAETE.md`. Zwei Pakete,
+(Raspberry Pi 4) und `aarch64_cortex-a76` (Raspberry Pi 5); weitere Prozessorarten folgen nach den ersten Tests. Welche Datei zu welchem Gerät passt: `packaging/GERAETE.html`. Zwei Pakete,
 `mynetworkmonitor-scan` (passend zur Prozessorart des Routers, `apk --print-arch`) und `luci-app-mynetworkmonitor`:
 in LuCI unter *System → Software → Paket hochladen…* nacheinander hochladen, oder per SSH mit
 `apk add --allow-untrusted <dateien>`. Schritt für Schritt: `packaging/ANLEITUNG.txt`. Benötigt werden
