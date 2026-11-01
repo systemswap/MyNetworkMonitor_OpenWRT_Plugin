@@ -261,3 +261,21 @@ Regeln:
 - **Abgesichert durch:** `tests/backend/check_merge.py` (gegen das Backend eines Routers: Router mit zwei Adressen
   und Gerät dahinter, Adresswechsel per DHCP, Einzelgerät-Scan, neues Gerät auf alter Adresse; mit dem alten Code
   alle vier fehlgeschlagen).
+
+## Nr. 16 – Repository: Netzangaben aus dem Testnetz in Doku und Testdaten
+
+- **Entdeckt:** 01.11.2026, nach dem Push von 0.0.24-beta (die Prüfung vor dem Commit zeigte die Zeile an, der Befehl
+  committete trotzdem). **Behoben:** am selben Tag, Historie umgeschrieben, Force-Push durch den Nutzer.
+- **Was:** Ein Zitat im Eintrag Nr. 15 enthielt eine Adresse aus dem Heimnetz des Nutzers; die Testdaten des Scanners
+  (DNS-Test, Test der privaten Bereiche) nutzten seit 0.0.1-beta Adressen und einen Namen aus dem Testnetz.
+- **Warum:** Beispieldaten aus der echten Umgebung übernommen; die Prüfung vor dem Commit lief im selben Befehl wie
+  der Commit, ihr Fund hielt ihn nicht auf.
+- **Lösung:** Adressen durch einen anderen privaten Bereich und den Namen durch `nas.home.arpa` ersetzt (gleiche
+  Längen, damit die Byte-Zählungen der Tests in allen alten Commits stimmen), das Zitat entfernt – im aktuellen Stand
+  und mit dem Bereinigungs-Werkzeug der gemeinsamen Vorlage in allen Commits. Vorher an einer Kopie geprüft: nur
+  Zeilen mit den ersetzten Angaben geändert, zwei Korrektur-Commits fielen als leer weg, aktueller Dateibaum gleich,
+  Tests eines alten Stands grün. Sicherung des alten Stands als Bundle im lokalen Testordner, die Ersetzungsliste
+  ebenda.
+- **Nicht tun:** echte Adressen, Gerätenamen oder Zitate mit solchen Angaben in Doku, Tests oder Commits übernehmen;
+  die Prüfung auf persönliche Angaben und den Commit in einem Befehl verketten – erst prüfen, dann committen.
+- **Abgesichert durch:** Durchsicht der vorgemerkten Änderungen in einem eigenen Schritt vor jedem Commit.
