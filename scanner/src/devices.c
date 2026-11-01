@@ -83,7 +83,7 @@ void mnm_devices_add_tcp(struct mnm_devices *devices, struct mnm_device *device,
 }
 
 void mnm_devices_add_service(struct mnm_devices *devices, struct mnm_device *device, const char *id, const char *name,
-			     uint16_t port, const char *detail)
+			     uint16_t port, int udp, const char *detail)
 {
 	for (int i = 0; i < device->service_count; i++)
 		if (device->services[i].port == port && strcmp(device->services[i].id, id) == 0)
@@ -94,6 +94,7 @@ void mnm_devices_add_service(struct mnm_devices *devices, struct mnm_device *dev
 	s->id = id;
 	s->name = name;
 	s->port = port;
+	s->udp = udp;
 	snprintf(s->detail, sizeof(s->detail), "%s", detail ? detail : "");
 	devices->changed = 1;
 }
@@ -187,6 +188,8 @@ void mnm_devices_write_json(struct mnm_devices *devices, FILE *out)
 			mnm_json_string(out, d->services[k].id, strlen(d->services[k].id));
 			write_string_field(out, "name", d->services[k].name);
 			fprintf(out, ",\"port\":%u", d->services[k].port);
+			if (d->services[k].udp)
+				fputs(",\"udp\":true", out);
 			if (d->services[k].detail[0])
 				write_string_field(out, "detail", d->services[k].detail);
 			fputc('}', out);

@@ -117,7 +117,7 @@ function serviceChips(d, names) {
 			byName.get(name).push(s);
 		}
 		return E('span', { 'class': 'mnm-chips' }, Array.from(byName, ([ name, list ]) => E('span', { 'class': 'mnm-chip',
-			'title': list.map(s => '%s %d%s'.format(_('port'), s.port, s.detail ? ' · ' + s.detail : '')).join('\n') }, name)));
+			'title': list.map(s => '%s %s%s'.format(_('port'), s.port + (s.udp ? '/udp' : ''), s.detail ? ' · ' + s.detail : '')).join('\n') }, name)));
 	}
 	return E('span', { 'class': 'mnm-chips' }, (d.tcp || []).map(p => E('span', { 'class': 'mnm-chip mnm-guess',
 		'title': _('port number only, not checked') }, SERVICES[p] || String(p))));
@@ -282,6 +282,7 @@ return view.extend({
 					'change': () => this.updateGroupBoxes() }),
 				' ', item.name,
 				(item.tcp || []).length ? E('span', { 'class': 'mnm-sub' }, ' · ' + item.tcp.join(', ')) : '',
+				(item.udp || []).length ? E('span', { 'class': 'mnm-sub' }, ' · UDP ' + item.udp.join(', ')) : '',
 				item.hint ? E('span', { 'class': 'mnm-sub' }, ' · ' + item.hint) : '',
 				item.available === false ? E('span', { 'class': 'mnm-sub' }, ' · ' + _('coming')) : ''
 			]));
@@ -478,7 +479,7 @@ return view.extend({
 		const row = (label, value) => value ? [ E('dt', {}, label), E('dd', {}, value) ] : [];
 		const names = this.serviceNames();
 		const ports = (d.tcp || []).map(p => {
-			const found = (d.services || []).filter(s => s.port == p);
+			const found = (d.services || []).filter(s => s.port == p && !s.udp);
 			// The parts of each line are spread into one flat list: E() resolves
 			// one level of arrays only, a nested one would end up as the text
 			// "[object HTMLElement]" (docs/FEHLERGEDAECHTNIS.md, No. 10).
@@ -487,6 +488,11 @@ return view.extend({
 				: [ E('span', { 'class': 'mnm-sub' }, d.services ? _('open, not recognised') : (SERVICES[p] || '')) ];
 			return E('div', {}, [ E('span', { 'class': 'mnm-mono' }, String(p)), ' ', ...what ]);
 		});
+		// Services that answered over UDP: there is no port scan for UDP, so
+		// they have no line of an open port above.
+		for (const s of (d.services || []).filter(s => s.udp))
+			ports.push(E('div', {}, [ E('span', { 'class': 'mnm-mono' }, s.port + '/udp'), ' ',
+				E('strong', {}, s.name || names[s.id] || s.id), s.detail ? E('span', { 'class': 'mnm-sub' }, ' · ' + s.detail) : '' ]));
 
 		return E('div', { 'class': 'cbi-section' }, [
 			E('h3', { 'style': 'margin-top:0' }, displayName(d)),

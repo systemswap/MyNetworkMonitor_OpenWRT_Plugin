@@ -130,7 +130,7 @@ static void on_service(void *context, uint32_t address, uint16_t port, const str
 	struct scan *scan = context;
 	struct mnm_device *d = mnm_devices_find(&scan->devices, address);
 	if (d)
-		mnm_devices_add_service(&scan->devices, d, probe->id, probe->name, port, detail);
+		mnm_devices_add_service(&scan->devices, d, probe->id, probe->name, port, probe->transport != MNM_TCP, detail);
 }
 
 /* "ssh=22" or "web=80,443,8080": a known probe and its ports. */
@@ -167,6 +167,72 @@ static void on_progress(void *context, uint64_t done, uint64_t total)
 	scan->done = done;
 	scan->total = total;
 	write_soon(scan);
+}
+
+/* The probes run in two rounds (TCP, then UDP) but are shown as one phase: the
+ * second round continues the count of the first. */
+struct probe_progress {
+	struct scan *scan;
+	uint64_t before, total;
+};
+
+static void on_probe_progress(void *context, uint64_t done, uint64_t total)
+{
+	struct probe_progress *p = context;
+	(void)total;
+	on_progress(p->scan, p->before + done, p->total);
+}
+
+static void on_probe_found(void *context, uint32_t address, uint16_t port, const struct mnm_probe *probe,
+			   const char *detail)
+{
+	on_service(((struct probe_progress *)context)->scan, address, port, probe, detail);
+}
+
+/* Whether the device already has a finding of the probe with this id. */
+static int device_has(const struct mnm_device *d, const char *id)
+{
+	for (int i = 0; id && i < d->service_count; i++)
+		if (strcmp(d->services[i].id, id) == 0)
+			return 1;
+	return 0;
+}
+
+/* The jobs of one round: TCP probes on the open ports of every device, or UDP
+ * probes on their ports for every device in the table (UDP has no port scan
+ * that tells where a service listens). Returns the number, or -1. */
+static ssize_t probe_jobs(const struct mnm_devices *devices, const struct probe_map *maps, size_t map_count,
+			  int transport, struct mnm_probe_job **out)
+{
+	size_t capacity = 0, count = 0;
+	struct mnm_probe_job *jobs = NULL;
+	for (size_t i = 0; i < devices->count; i++) {
+		const struct mnm_device *dev = &devices->list[i];
+		for (size_t m = 0; m < map_count; m++) {
+			const struct mnm_probe *probe = maps[m].probe;
+			if (probe->transport != transport || device_has(dev, probe->unless))
+				continue;
+			const uint16_t *ports = transport == MNM_TCP ? dev->tcp : NULL;
+			size_t n = transport == MNM_TCP ? dev->tcp_count : maps[m].ports.count;
+			for (size_t k = 0; k < n; k++) {
+				uint16_t port = ports ? ports[k] : maps[m].ports.list[k];
+				if (ports && !map_has_port(&maps[m], port))
+					continue;
+				if (count == capacity) {
+					capacity = capacity ? capacity * 2 : 64;
+					struct mnm_probe_job *j = realloc(jobs, capacity * sizeof(*j));
+					if (!j) {
+						free(jobs);
+						return -1;
+					}
+					jobs = j;
+				}
+				jobs[count++] = (struct mnm_probe_job){ dev->ipv4, port, probe };
+			}
+		}
+	}
+	*out = jobs;
+	return (ssize_t)count;
 }
 
 /* The found devices as a target list for the port phase, one range per device. */
@@ -376,48 +442,64 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* Phase 3: the services behind the open ports. */
+	/* Phase 3: the services - first behind the open TCP ports, then over UDP
+	 * on every device in the table (only now, so that a UDP probe can be left
+	 * out where a TCP probe has already found the service), then the
+	 * broadcasts. */
 	if (!interrupted && status == 0 && map_count) {
-		size_t capacity = 0, count = 0;
 		struct mnm_probe_job *jobs = NULL;
-		for (size_t i = 0; i < scan.devices.count; i++) {
-			struct mnm_device *dev = &scan.devices.list[i];
-			for (size_t k = 0; k < dev->tcp_count; k++) {
-				for (size_t m = 0; m < map_count; m++) {
-					if (!map_has_port(&maps[m], dev->tcp[k]))
-						continue;
-					if (count == capacity) {
-						capacity = capacity ? capacity * 2 : 64;
-						struct mnm_probe_job *j = realloc(jobs, capacity * sizeof(*j));
-						if (!j) {
-							free(jobs);
-							jobs = NULL;
-							count = 0;
-							status = 1;
-							goto no_jobs;
-						}
-						jobs = j;
-					}
-					jobs[count++] = (struct mnm_probe_job){ dev->ipv4, dev->tcp[k], maps[m].probe };
-				}
-			}
-		}
-		if (count) {
-			struct mnm_probe_options po = { .parallel = tcp.parallel, .timeout_ms = tcp.timeout_ms + 1500,
-							.stop = &stop_requested, .on_found = on_service,
-							.on_progress = on_progress, .context = &scan };
-			scan.phase = "services";
-			int outcome = mnm_probe_run(jobs, count, &po);
+		struct probe_progress progress = { .scan = &scan };
+		struct mnm_probe_options po = { .parallel = tcp.parallel, .timeout_ms = tcp.timeout_ms + 1500,
+						.stop = &stop_requested, .on_found = on_probe_found,
+						.on_progress = on_probe_progress, .context = &progress };
+		ssize_t tcp_count = probe_jobs(&scan.devices, maps, map_count, MNM_TCP, &jobs);
+		size_t udp_guess = 0;
+		for (size_t m = 0; m < map_count; m++)
+			if (maps[m].probe->transport == MNM_UDP)
+				udp_guess += maps[m].ports.count * scan.devices.count;
+		scan.phase = "services";
+		progress.total = (tcp_count > 0 ? (uint64_t)tcp_count : 0) + udp_guess;
+		if (tcp_count < 0)
+			status = 1;
+		else if (tcp_count > 0) {
+			int outcome = mnm_probe_run(jobs, (size_t)tcp_count, &po);
 			if (outcome == 1)
 				interrupted = 1;
 			else if (outcome < 0)
 				status = 1;
 		}
-		if (!interrupted && status == 0)
+		free(jobs);
+		jobs = NULL;
+
+		if (!interrupted && status == 0) {
+			ssize_t udp_count = probe_jobs(&scan.devices, maps, map_count, MNM_UDP, &jobs);
+			if (udp_count < 0)
+				status = 1;
+			else if (udp_count > 0) {
+				progress.before = (uint64_t)tcp_count;
+				progress.total = (uint64_t)tcp_count + (uint64_t)udp_count;
+				int outcome = mnm_probe_run(jobs, (size_t)udp_count, &po);
+				if (outcome == 1)
+					interrupted = 1;
+				else if (outcome < 0)
+					status = 1;
+			}
+			free(jobs);
+		}
+
+		for (size_t m = 0; m < map_count && !interrupted && status == 0 && !stop_requested; m++) {
+			const struct mnm_probe *probe = maps[m].probe;
+			uint32_t found[64];
+			if (probe->transport != MNM_BROADCAST || !probe->ask_all || maps[m].ports.count == 0)
+				continue;
+			size_t n = probe->ask_all(&targets, found, 64);
+			for (size_t k = 0; k < n; k++)
+				on_service(&scan, found[k], maps[m].ports.list[0], probe, "");
+		}
+
+		if (!interrupted && status == 0 && !stop_requested)
 			for (size_t i = 0; i < scan.devices.count; i++)
 				scan.devices.list[i].services_checked = 1;
-no_jobs:
-		free(jobs);
 	}
 
 	scan.phase = "finished";

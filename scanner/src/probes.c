@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "probes_steps.h"
+#include "probes_udp.h"
 #include "targets.h"
 
 /* ------------------------------------------------------------- helpers */
@@ -519,24 +520,24 @@ static int identify_dns_tcp(const uint8_t *r, size_t len)
 #define FIXED(a) a, sizeof(a), NULL
 
 const struct mnm_probe mnm_probes[] = {
-	{ "anydesk", "AnyDesk", FIXED(hello_anydesk), identify_anydesk, NULL, NULL },
-	{ "bigfixremote", "BigFix", FIXED(hello_bigfixremote), identify_bigfix, NULL, NULL },
-	{ "ftp", "FTP", NULL, 0, NULL, identify_ftp, describe_ftp, NULL },
-	{ "influxdb2", "InfluxDB", FIXED(hello_influxdb2), identify_influxdb, NULL, NULL },
-	{ "mysql", "MySQL", NULL, 0, NULL, identify_mysql, describe_mysql, NULL },
-	{ "mariadb", "MariaDB", NULL, 0, NULL, identify_mariadb, describe_mysql, NULL },
-	{ "mongodb", "MongoDB", FIXED(hello_mongodb), identify_mongodb, describe_mongodb, NULL },
-	{ "oracledb", "Oracle", FIXED(hello_oracledb), identify_oracle, NULL, NULL },
-	{ "postgresql", "PostgreSQL", FIXED(hello_postgresql), identify_postgresql, describe_postgresql, NULL },
-	{ "rdp", "RDP", FIXED(hello_rdp), identify_rdp, describe_rdp, NULL },
-	{ "rustdeskclient", "RustDesk", FIXED(hello_rustdeskclient), identify_rustdesk_client, NULL, NULL },
-	{ "rustdeskserver", "RustDesk server", FIXED(hello_rustdeskserver), identify_rustdesk_server, NULL, NULL },
-	{ "ssh", "SSH", FIXED(hello_ssh), identify_ssh, describe_ssh, NULL },
-	{ "teamviewer", "TeamViewer", FIXED(hello_teamviewer), identify_teamviewer, NULL, NULL },
-	{ "ultravnc", "VNC", FIXED(hello_ultravnc), identify_vnc, describe_vnc, NULL },
-	{ "webservices", "HTTP", NULL, 0, build_http, identify_http, describe_http, NULL },
-	{ "dns_tcp", "DNS", FIXED(hello_dns_tcp), identify_dns_tcp, NULL, NULL },
-	{ NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL },
+	{ "anydesk", "AnyDesk", FIXED(hello_anydesk), identify_anydesk, NULL, NULL, MNM_TCP, NULL, NULL },
+	{ "bigfixremote", "BigFix", FIXED(hello_bigfixremote), identify_bigfix, NULL, NULL, MNM_TCP, NULL, NULL },
+	{ "ftp", "FTP", NULL, 0, NULL, identify_ftp, describe_ftp, NULL, MNM_TCP, NULL, NULL },
+	{ "influxdb2", "InfluxDB", FIXED(hello_influxdb2), identify_influxdb, NULL, NULL, MNM_TCP, NULL, NULL },
+	{ "mysql", "MySQL", NULL, 0, NULL, identify_mysql, describe_mysql, NULL, MNM_TCP, NULL, NULL },
+	{ "mariadb", "MariaDB", NULL, 0, NULL, identify_mariadb, describe_mysql, NULL, MNM_TCP, NULL, NULL },
+	{ "mongodb", "MongoDB", FIXED(hello_mongodb), identify_mongodb, describe_mongodb, NULL, MNM_TCP, NULL, NULL },
+	{ "oracledb", "Oracle", FIXED(hello_oracledb), identify_oracle, NULL, NULL, MNM_TCP, NULL, NULL },
+	{ "postgresql", "PostgreSQL", FIXED(hello_postgresql), identify_postgresql, describe_postgresql, NULL, MNM_TCP, NULL, NULL },
+	{ "rdp", "RDP", FIXED(hello_rdp), identify_rdp, describe_rdp, NULL, MNM_TCP, NULL, NULL },
+	{ "rustdeskclient", "RustDesk", FIXED(hello_rustdeskclient), identify_rustdesk_client, NULL, NULL, MNM_TCP, NULL, NULL },
+	{ "rustdeskserver", "RustDesk server", FIXED(hello_rustdeskserver), identify_rustdesk_server, NULL, NULL, MNM_TCP, NULL, NULL },
+	{ "ssh", "SSH", FIXED(hello_ssh), identify_ssh, describe_ssh, NULL, MNM_TCP, NULL, NULL },
+	{ "teamviewer", "TeamViewer", FIXED(hello_teamviewer), identify_teamviewer, NULL, NULL, MNM_TCP, NULL, NULL },
+	{ "ultravnc", "VNC", FIXED(hello_ultravnc), identify_vnc, describe_vnc, NULL, MNM_TCP, NULL, NULL },
+	{ "webservices", "HTTP", NULL, 0, build_http, identify_http, describe_http, NULL, MNM_TCP, NULL, NULL },
+	{ "dns_tcp", "DNS", FIXED(hello_dns_tcp), identify_dns_tcp, NULL, NULL, MNM_TCP, NULL, NULL },
+	{ NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, MNM_TCP, NULL, NULL },
 };
 
 const struct mnm_probe *mnm_probe_find(const char *id)
@@ -545,6 +546,9 @@ const struct mnm_probe *mnm_probe_find(const char *id)
 		if (strcmp(p->id, id) == 0)
 			return p;
 	for (const struct mnm_probe *p = mnm_probes_steps; p->id; p++)
+		if (strcmp(p->id, id) == 0)
+			return p;
+	for (const struct mnm_probe *p = mnm_probes_udp; p->id; p++)
 		if (strcmp(p->id, id) == 0)
 			return p;
 	return NULL;

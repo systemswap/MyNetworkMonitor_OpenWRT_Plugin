@@ -79,7 +79,7 @@ Root hat ein zufälliges Passwort (LuCI), SSH mit einem eigenen Schlüssel; beid
 Die Pakete in `scanner/src/probes.c` müssen Byte für Byte denen des Desktop-Programms entsprechen. Vor jedem Commit,
 der sie berührt, vergleicht ein Skript im lokalen Testordner jedes Array mit dem C#-Quellcode (Länge und jedes Byte,
 gebaute Pakete wie Oracle-TNS und DNS nachgerechnet); nur bei „all identical“ wird committet. Für die Pakete in
-`scanner/src/probes_steps.c` macht das ein zweites Skript ebenso (jedes Array `pkt_*` gegen das Paket gleichen
+`scanner/src/probes_steps.c` und `scanner/src/probes_udp.c` macht das ein zweites Skript ebenso (jedes Array `pkt_*` gegen das Paket gleichen
 Namens, das ein Extraktor aus dem C#-Quellcode liest, gebaute Pakete aus dem Builder-Code nachgerechnet). Die Prüfregeln haben
 Tests in `scanner/tests/tests.c` (je Sonde eine passende und fremde Antworten, alle Prüfungen auf Antworten von 0 bis
 64 Byte unter AddressSanitizer).
@@ -110,3 +110,4 @@ nicht). Vorher prüfen, dass die Geräteliste nicht leer ist; sonst ein Gerät m
 | 01.11.2026 | 0.0.19-beta | 166 Prüfungen grün; Gerätenamen im Heimnetz (VM als Endgerät): alle Namen, die das Gateway kennt, gefunden – der Namensserver aus DHCP kannte keinen; Spalte „Device“ zeigt den Namen; Maustest ohne Befund |
 | 01.11.2026 | 0.0.20-beta | Filter über der Tabelle: Maustest im Ruhezustand und während laufender Scans ohne Befund (beide Auflösungen); dabei Nr. 13 gefunden und behoben |
 | 01.11.2026 | 0.0.21-beta | Stufe 3b, TCP: 16 Pakete identisch; 200 Prüfungen grün, darunter vollständige Läufe gegen nachgespielte Geräte (S7 mit Steckplatzsuche und Kennung, Modbus mit Geräte-ID, WAGO, SECS/GEM mit Separate.req); im Heimnetz keine Fehlerkennung (SECS/GEM auf den Webports 5000/5001 eines NAS) |
+| 01.11.2026 | 0.0.22-beta | Stufe 3b, UDP: 5 Pakete identisch; 222 Prüfungen grün (Läufe gegen nachgespielten Namensserver, BACnet-Gerät, SQL-Server-Browser, geschlossenen Port); im Heimnetz: DNS über UDP an Gateway, NAS und VM, DHCP-Server am Gateway erkannt, kein BACnet oder MS-SQL fälschlich; Maustest ohne Befund, Details zeigen „53/udp“ |

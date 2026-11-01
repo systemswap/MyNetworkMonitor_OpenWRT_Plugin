@@ -376,9 +376,16 @@ const methods = {
 			const probes = [];
 			for (let g in catalog.groups)
 				for (let item in g.items)
-					if (index(services, item.id) >= 0 && length(item.tcp ?? []) > 0)
-						for (let id in (item.probes ?? []))
-							push(probes, sprintf('%s=%s', id, join(',', map(item.tcp, p => '' + p))));
+					if (index(services, item.id) >= 0) {
+						if (length(item.tcp ?? []) > 0)
+							for (let id in (item.probes ?? []))
+								push(probes, sprintf('%s=%s', id, join(',', map(item.tcp, p => '' + p))));
+						// UDP probes: the scanner asks them of every device found,
+						// there is no port scan for UDP.
+						if (length(item.udp ?? []) > 0)
+							for (let id in (item.udp_probes ?? []))
+								push(probes, sprintf('%s=%s', id, join(',', map(item.udp, p => '' + p))));
+					}
 
 			let targets;
 			if (length(target) > 0) {

@@ -10,10 +10,8 @@ Ausbaustufen, jede für sich benutzbar:
 
 1. **Geräteliste im Test bestätigen** (gebaut in 0.0.4-beta): Seite mit Tabelle und Details vom Nutzer ansehen lassen;
    Hersteller und MAC-Adressen auf einem Gerät im selben Netzsegment prüfen (MX4200 oder VM an `br0`).
-2. **Dienst-Sonden, Teil b** (TCP-Sonden für MS-SQL, OPC UA, S7, Modbus, WAGO, SECS/GEM in 0.0.21-beta): noch die
-   UDP-Sonden – DNS über UDP, BACnet, Rückfrage beim SQL-Server-Browser, DHCP-Rundruf – und die SMB-Versionen. Pakete
-   wieder Byte für Byte aus dem Desktop-Programm, mit Abgleich-Skript. Später für die Details: OPC-UA-Endpunkte,
-   SECS/GEM-Modell (S1F1).
+2. **Dienst-Sonden, Teil b** (TCP-Sonden in 0.0.21-beta, UDP-Sonden und DHCP in 0.0.22-beta): noch die
+   SMB-Versionen. Später für die Details: OPC-UA-Endpunkte, SECS/GEM-Modell (S1F1).
 3. **Rundrufe:** SSDP/UPnP samt Gerätebeschreibung, NetBIOS-Namensabfrage, ONVIF (WS-Discovery).
 4. **SNMP, SMB, Zertifikate:** SNMP v2c (Systemname, Beschreibung), angebotene SMB-Versionen, Zertifikate von
    Webseiten (Aussteller, Gültigkeit, Namen) über mbedTLS.
@@ -22,6 +20,19 @@ Ausbaustufen, jede für sich benutzbar:
    verpassen eine einzelne Anfrage). Grund: Sonden gehen nur an Geräte der Tabelle (`docs/Architektur.md`), ein
    übersehenes Gerät bekommt keine. In anderen Netzen hinter einem Router gilt als Gerät, wer auf Ping antwortet
    (Entscheidung des Nutzers, 01.11.2026) – kein zusätzliches Anklopfen an TCP-Ports.
+
+6. **Test im Firmennetz** (Wunsch des Nutzers, 01.11.2026; im Heimnetz gibt es diese Geräte nicht). Die Sonden
+   sind gegen nachgespielte Geräte getestet und im Heimnetz ohne Fehlerkennung, aber noch an keinem echten Gerät:
+   - MS-SQL auf 1433 (Version, Verschlüsselung) und eine benannte Instanz über den SQL-Server-Browser (UDP 1434),
+   - OPC UA (4840),
+   - S7 auf 102: eine S7-300/400 (Rack 0, Steckplatz 2) und eine S7-1200/1500 (Suche nach dem Steckplatz),
+     Bestellnummer und Firmware,
+   - Modbus TCP (502) mit Geräte-ID, ein WAGO-Controller über Modbus und über 6626,
+   - SECS/GEM (5000-5002): angenommene Sitzung, belegte Sitzung (nur Ablehnung oder Schweigen),
+   - BACnet (UDP 47808) mit Name und Hersteller,
+   - DHCP hinter einem Relay (Serverkennung).
+   Dabei Laufzeit des ganzen Scans und Last auf dem Router ansehen. Echte Antworten als Testfälle übernehmen
+   (Adressen und Namen erfunden, Mitschnitte nur im lokalen Testordner).
 
 ## Später
 

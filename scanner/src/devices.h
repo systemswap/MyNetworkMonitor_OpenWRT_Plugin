@@ -34,6 +34,7 @@ struct mnm_service {
 	const char *id;          /* probe id, a static string of the probe table */
 	const char *name;        /* its display name, also static */
 	uint16_t port;
+	int udp;                 /* answered over UDP; else on a TCP port */
 	char detail[MNM_DETAIL_LEN];
 };
 
@@ -72,7 +73,7 @@ void mnm_devices_add_ipv6(struct mnm_devices *devices, const uint8_t mac[6], con
 void mnm_devices_add_tcp(struct mnm_devices *devices, struct mnm_device *device, uint16_t port);
 /* Records a recognised service (once per service and port). */
 void mnm_devices_add_service(struct mnm_devices *devices, struct mnm_device *device, const char *id, const char *name,
-			     uint16_t port, const char *detail);
+			     uint16_t port, int udp, const char *detail);
 void mnm_devices_mark(struct mnm_devices *devices, struct mnm_device *device, unsigned int seen);
 
 /* Writes the devices as a JSON array, ordered by address (the list itself

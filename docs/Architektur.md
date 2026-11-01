@@ -179,6 +179,25 @@ Zeitlich geordnet, neue ans Ende.
 - **Abweichungen:** Ein Versuch je Sonde statt bis zu drei. Die S7-Suche hört nach der ersten Sechsergruppe mit einer
   Bestätigung auf, statt alle Anfragen zu senden (gleiches Ergebnis, weniger Verbindungen). Noch nicht übernommen, weil
   nur für die Details: OPC-UA-Endpunkte (die Anfragen enthalten Zeitstempel und Kanalnummern der Laufzeit),
-  SECS/GEM-Abfrage von Modell und Softwarestand (S1F1) und das Warten auf die Selbstvorstellung der Anlage. Die
-  Rückfrage beim SQL-Server-Browser (UDP 1434) kommt mit den UDP-Sonden.
+  SECS/GEM-Abfrage von Modell und Softwarestand (S1F1) und das Warten auf die Selbstvorstellung der Anlage.
+
+### 01.11.2026 – Sonden über UDP und Rundruf (Stufe 3b, UDP)
+
+- **Entschieden:** Jede Sonde trägt ihren Transport (`transport` in `struct mnm_probe`): TCP-Sonden gehen an offene
+  Ports, UDP-Sonden (DNS, BACnet, SQL-Server-Browser) an jedes Gerät der Tabelle – UDP hat keine Portsuche, die sagt,
+  wo ein Dienst lauscht –, Rundrufe (DHCP) einmal je eigenem Netz der Ziele. Die UDP-Runde läuft nach der TCP-Runde,
+  damit eine Sonde entfallen kann, wenn eine andere den Dienst schon fand (`unless`: der SQL-Server-Browser nur, wo
+  1433 nicht als MS-SQL antwortete – wie im Desktop-Programm). Beide Runden zählen in der Seite als ein Fortschritt.
+- **Katalog:** `udp` und `udp_probes` neben `tcp` und `probes`; das Backend gibt beide als `--probe id=ports` mit, das
+  Scanprogramm erkennt am Transport der Sonde, was es damit tut. Die Ausgabe kennzeichnet UDP-Funde (`"udp": true`),
+  die Seite zeigt sie als „53/udp“.
+- **Wartezeiten** wie im Desktop-Programm fest: DNS dreimal 1 s mit 200 ms Pause, BACnet 2 s je Anfrage,
+  SQL-Server-Browser höchstens dreimal 2 s in 3 s, DHCP 2 s.
+- **DHCP:** Der Socket hängt an der Schnittstelle (`SO_BINDTODEVICE`) und an keiner Adresse – Linux gibt
+  Rundruf-Antworten nur an solche Sockets weiter; das Desktop-Programm bindet an die Adresse der Schnittstelle.
+- **Abweichungen in der Auswertung** (gesendet wird dasselbe): DHCP liest die Server-Kennung (Option 54) aus der
+  Optionsliste nach RFC 2132 statt das erste Byte 54 irgendwo in der Antwort zu nehmen. BACnet liest Werte nur aus
+  einer ComplexACK (ASHRAE 135, 20.1.5) – sonst würde aus einer Ablehnung eine „VendorID“; eine zu kurze Antwort
+  oder eine ausbleibende Antwort auf eine einzelne Eigenschaft lässt nur diese Angabe weg, statt den Fund zu
+  verwerfen. UDP-Sockets sind verbunden, nehmen also nur Antworten des gefragten Geräts an.
 

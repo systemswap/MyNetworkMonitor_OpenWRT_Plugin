@@ -20,6 +20,7 @@
 #include "../src/packets.h"
 #include "../src/probes.h"
 #include "../src/probes_steps.h"
+#include "../src/probes_udp.h"
 #include "../src/textdata.h"
 #include "../src/ports.h"
 #include "../src/targets.h"
@@ -523,6 +524,9 @@ static void test_probes(void)
 	for (const struct mnm_probe *p = mnm_probes_steps; p->id; p++)
 		for (size_t len = 0; len <= sizeof(junk); len++)
 			p->identify(junk, len);
+	for (const struct mnm_probe *p = mnm_probes_udp; p->id; p++)
+		for (size_t len = 0; len <= sizeof(junk); len++)
+			p->identify(junk, len);
 }
 
 int main(void)
@@ -541,6 +545,7 @@ int main(void)
 	test_probes();
 	test_dns_names();
 	test_probes_steps();
+	test_probes_udp();
 	printf("%d checks, %d failed\n", checks, failures);
 	return failures ? 1 : 0;
 }

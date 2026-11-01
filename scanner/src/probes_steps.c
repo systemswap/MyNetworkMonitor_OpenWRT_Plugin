@@ -998,11 +998,11 @@ static int run_secsgem(uint32_t address, uint16_t port, int timeout_ms, char *de
 #define FIXED(a) a, sizeof(a), NULL
 
 const struct mnm_probe mnm_probes_steps[] = {
-	{ "mssqlserver", "MS-SQL", FIXED(pkt_mssql_prelogin), identify_mssql, describe_mssql, NULL },
-	{ "opcua", "OPC UA", FIXED(pkt_opcua_hello), identify_opcua, NULL, NULL },
-	{ "s7", "S7", FIXED(pkt_s7_cotp_cr), identify_s7, NULL, run_s7 },
-	{ "modbus", "Modbus", FIXED(pkt_modbus_read_holding_registers), identify_modbus, NULL, run_modbus },
-	{ "wago", "WAGO", FIXED(pkt_wago_read_device_id), identify_wago, describe_wago, run_wago },
-	{ "secsgem", "SECS/GEM", FIXED(pkt_secsgem_select_req), identify_secsgem, describe_secsgem, run_secsgem },
-	{ NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL },
+	{ "mssqlserver", "MS-SQL", FIXED(pkt_mssql_prelogin), identify_mssql, describe_mssql, NULL, MNM_TCP, NULL, NULL },
+	{ "opcua", "OPC UA", FIXED(pkt_opcua_hello), identify_opcua, NULL, NULL, MNM_TCP, NULL, NULL },
+	{ "s7", "S7", FIXED(pkt_s7_cotp_cr), identify_s7, NULL, run_s7, MNM_TCP, NULL, NULL },
+	{ "modbus", "Modbus", FIXED(pkt_modbus_read_holding_registers), identify_modbus, NULL, run_modbus, MNM_TCP, NULL, NULL },
+	{ "wago", "WAGO", FIXED(pkt_wago_read_device_id), identify_wago, describe_wago, run_wago, MNM_TCP, NULL, NULL },
+	{ "secsgem", "SECS/GEM", FIXED(pkt_secsgem_select_req), identify_secsgem, describe_secsgem, run_secsgem, MNM_TCP, NULL, NULL },
+	{ NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, MNM_TCP, NULL, NULL },
 };

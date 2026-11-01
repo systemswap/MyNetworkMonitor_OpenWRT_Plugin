@@ -99,6 +99,29 @@ static size_t local_networks(struct local_net *nets, size_t max)
 	return count;
 }
 
+_Static_assert(sizeof(((struct mnm_local_net *)0)->name) == IF_NAMESIZE, "interface names of the same size");
+
+size_t mnm_local_networks_of(const struct mnm_targets *targets, struct mnm_local_net *out, size_t max)
+{
+	struct local_net nets[32];
+	size_t count = local_networks(nets, 32), n = 0;
+
+	for (size_t i = 0; i < count && n < max; i++) {
+		uint32_t first = nets[i].address & nets[i].mask, last = first | ~nets[i].mask;
+		int overlaps = 0;
+		for (size_t r = 0; r < targets->count && !overlaps; r++)
+			overlaps = targets->ranges[r].first <= last && targets->ranges[r].last >= first;
+		if (!overlaps)
+			continue;
+		memcpy(out[n].name, nets[i].name, sizeof(out[n].name));
+		out[n].name[sizeof(out[n].name) - 1] = '\0';
+		out[n].address = nets[i].address;
+		out[n].mask = nets[i].mask;
+		n++;
+	}
+	return n;
+}
+
 static void handle_arp_frames(int fd, const struct mnm_targets *targets, struct mnm_devices *devices)
 {
 	uint8_t frame[128];

@@ -16,6 +16,14 @@
  * enough for the identification of a controller (order number, firmware, name). */
 #define MNM_DETAIL_LEN 160
 
+struct mnm_targets;
+
+enum mnm_transport {
+	MNM_TCP = 0,        /* on the open TCP ports of a device found */
+	MNM_UDP = 1,        /* unicast to every device in the table: UDP has no port scan that tells where it listens */
+	MNM_BROADCAST = 2,  /* one broadcast per local network (ask_all) */
+};
+
 struct mnm_probe {
 	const char *id;            /* catalog id, e.g. "ssh" */
 	const char *name;          /* shown in the table, e.g. "SSH" */
@@ -34,6 +42,16 @@ struct mnm_probe {
 	 * returns 1 if the service was recognised, with an optional detail. Runs
 	 * in a worker thread, so it may block within its time limits. */
 	int (*run)(uint32_t address, uint16_t port, int timeout_ms, char *detail, size_t detail_len);
+	/* How the probe reaches the service (enum mnm_transport). */
+	int transport;
+	/* Optional: the id of a TCP probe whose finding on the same device makes
+	 * this one unnecessary - the SQL Server Browser is asked only where port
+	 * 1433 did not answer as MS-SQL. */
+	const char *unless;
+	/* For MNM_BROADCAST: asks all local networks of the targets at once and
+	 * writes the addresses of the services that answered to found (at most
+	 * max); returns their number. */
+	size_t (*ask_all)(const struct mnm_targets *targets, uint32_t *found, size_t max);
 };
 
 /* The probe with this catalog id, or NULL. */

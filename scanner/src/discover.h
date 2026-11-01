@@ -43,6 +43,16 @@ void mnm_discover_leases(const char *path, struct mnm_devices *devices);
  * the "manuf" format (one pass over the file, longest prefix wins). */
 void mnm_discover_vendors(const char *path, struct mnm_devices *devices);
 
+/* A local IPv4 network of the router. */
+struct mnm_local_net {
+	char name[16];            /* interface, e.g. "br-lan" */
+	uint32_t address, mask;   /* host byte order */
+};
+
+/* The local IPv4 networks (up, not loopback) that overlap the targets; returns
+ * their number, at most max. */
+size_t mnm_local_networks_of(const struct mnm_targets *targets, struct mnm_local_net *nets, size_t max);
+
 /* Whether address lies in one of the target ranges. */
 int mnm_targets_contain(const struct mnm_targets *targets, uint32_t address);
 

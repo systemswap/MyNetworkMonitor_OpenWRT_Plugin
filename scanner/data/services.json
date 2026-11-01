@@ -18,8 +18,8 @@
 			{ "id": "web", "name": "Web servers", "tcp": [80, 443, 1880, 3000, 5000, 5001, 8080, 8086, 8443], "default": true, "probes": ["webservices"] },
 			{ "id": "ssh", "name": "SSH", "tcp": [22], "default": true, "probes": ["ssh"] },
 			{ "id": "ftp", "name": "FTP", "tcp": [21], "default": true, "probes": ["ftp"] },
-			{ "id": "dns", "name": "DNS", "tcp": [53], "default": true, "probes": ["dns_tcp"] },
-			{ "id": "dhcp", "name": "DHCP server", "hint": "UDP", "available": false, "default": true }
+			{ "id": "dns", "name": "DNS", "tcp": [53], "udp": [53], "default": true, "probes": ["dns_tcp"], "udp_probes": ["dns_udp"] },
+			{ "id": "dhcp", "name": "DHCP server", "udp": [67], "default": true, "udp_probes": ["dhcp"] }
 		] },
 		{ "id": "remote", "name": "Remote desktop & remote maintenance", "icon": "🖥️", "items": [
 			{ "id": "rdp", "name": "RDP", "tcp": [3389], "default": true, "probes": ["rdp"] },
@@ -37,7 +37,7 @@
 			{ "id": "onvif", "name": "ONVIF cameras", "hint": "WS-Discovery for cameras", "available": false, "default": true }
 		] },
 		{ "id": "sql", "name": "SQL databases", "icon": "🗄️", "items": [
-			{ "id": "mssql", "name": "MS-SQL Server", "tcp": [1433], "default": false, "probes": ["mssqlserver"] },
+			{ "id": "mssql", "name": "MS-SQL Server", "tcp": [1433], "udp": [1434], "default": false, "probes": ["mssqlserver"], "udp_probes": ["mssqlbrowser"] },
 			{ "id": "mysql", "name": "MySQL / MariaDB", "tcp": [3306], "default": false, "probes": ["mysql", "mariadb"] },
 			{ "id": "postgresql", "name": "PostgreSQL", "tcp": [5432], "default": false, "probes": ["postgresql"] },
 			{ "id": "oracle", "name": "Oracle Database", "tcp": [1521], "default": false, "probes": ["oracledb"] }
@@ -50,7 +50,7 @@
 			{ "id": "opcua", "name": "OPC UA", "tcp": [4840], "default": false, "probes": ["opcua"] },
 			{ "id": "modbus", "name": "Modbus TCP", "tcp": [502], "default": false, "probes": ["modbus"] },
 			{ "id": "s7", "name": "Siemens S7", "tcp": [102, 1020], "default": false, "probes": ["s7"] },
-			{ "id": "bacnet", "name": "BACnet", "hint": "UDP", "available": false, "default": false },
+			{ "id": "bacnet", "name": "BACnet", "udp": [47808], "default": false, "udp_probes": ["bacnet"] },
 			{ "id": "wago", "name": "WAGO", "tcp": [6626], "default": false, "probes": ["wago"] },
 			{ "id": "secsgem", "name": "SECS/GEM (HSMS)", "tcp": [5000, 5001, 5002], "default": false, "probes": ["secsgem"] }
 		] }

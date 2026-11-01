@@ -26,4 +26,7 @@ int listen_local(uint16_t *port);
 /* The tests of the probes with several steps (test_steps.c). */
 void test_probes_steps(void);
 
+/* The tests of the UDP probes (test_udp.c). */
+void test_probes_udp(void);
+
 #endif
