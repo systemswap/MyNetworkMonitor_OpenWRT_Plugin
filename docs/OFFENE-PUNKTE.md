@@ -17,6 +17,11 @@ Ausbaustufen, jede für sich benutzbar:
 4. **SNMP, SMB, Zertifikate:** SNMP v2c (Systemname, Beschreibung), angebotene SMB-Versionen, Zertifikate von
    Webseiten (Aussteller, Gültigkeit, Namen) über mbedTLS.
 
+5. **Gerätesuche gründlicher:** eine zweite ARP-Runde für Adressen ohne Antwort (Geräte im WLAN-Stromsparmodus
+   verpassen eine einzelne Anfrage); in eigenen Bereichen hinter einem anderen Router, wo es kein ARP gibt, zusätzlich
+   ein kurzes Anklopfen an typischen TCP-Ports (Windows beantwortet Ping ab Werk nicht). Grund: Sonden gehen nur an
+   Geräte der Tabelle (`docs/Architektur.md`), ein übersehenes Gerät bekommt keine.
+
 ## Später
 
 - **Alle Architekturen bauen:** GitHub-Bau mit dem SDK je Architektur – erst, wenn der Nutzer einen Remote will.
