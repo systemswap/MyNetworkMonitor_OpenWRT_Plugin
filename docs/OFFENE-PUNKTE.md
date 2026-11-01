@@ -16,11 +16,18 @@ Ausbaustufen, jede für sich benutzbar:
 3. **Rundrufe:** SSDP/UPnP samt Gerätebeschreibung, NetBIOS-Namensabfrage, ONVIF (WS-Discovery).
 4. **SNMP, SMB, Zertifikate:** SNMP v2c (Systemname, Beschreibung), angebotene SMB-Versionen, Zertifikate von
    Webseiten (Aussteller, Gültigkeit, Namen) über mbedTLS.
+5. **MAC-Adressen und Hersteller** (Wunsch des Nutzers, 01.11.2026): MAC-Adressen aus der Nachbartabelle des Routers
+   (`/proc/net/arp`, IPv6 über `ip neigh`), Hersteller aus den öffentlichen IEEE-Registern. Die Liste ist einige MB
+   groß: auf Knopfdruck laden; wahlweise nur im RAM (`/tmp`, kleine Router) oder dauerhaft auf dem Flash (z. B.
+   MX4200 mit 512 MB). Test braucht ein Gerät im selben Netzsegment (Router oder VM an `br0`).
 
 ## Später
 
 - **Alle Architekturen bauen:** GitHub-Bau mit dem SDK je Architektur – erst, wenn der Nutzer einen Remote will.
-- **Test auf dem Router des Nutzers:** Modell nennt der Nutzer später.
+- **Test auf dem Router des Nutzers:** Linksys MX4200 v1 (Ziel `qualcommax/ipq807x`, Paketarchitektur
+  `aarch64_cortex-a53`); SDK dafür nach Rückfrage wegen der Größe laden.
+- **Rundruf-Verfahren in der VM testen:** braucht einen echten Anschluss der VM an `br0` mit abgeschaltetem DHCP –
+  nur nach Rückfrage (Systemeinstellung für qemu-bridge-helper).
 
 ## Bewusst nicht (nicht wieder vorschlagen)
 
