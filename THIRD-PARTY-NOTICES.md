@@ -16,6 +16,12 @@ eigene Pakete installiert; sie werden zur Laufzeit geladen und nicht mit diesem 
 Nur beim Entwickeln: das SDK von OpenWrt (GPL-2.0, https://openwrt.org), für die Tests auf dem PC der C-Compiler
 des Systems.
 
+## Daten
+
+| Daten | Herkunft | Lizenz |
+|---|---|---|
+| MAC-Herstellerliste (wird nicht mitgeliefert, auf Knopfdruck auf den Router geladen) | Datei `manuf` des Wireshark-Projekts (https://www.wireshark.org/download/automated/data/manuf), zusammengestellt aus den öffentlichen Registern der IEEE Registration Authority (MA-L, MA-M, MA-S) | Fakten aus einem öffentlichen Register; die Datei nennt keine eigenen Bedingungen |
+
 ## Übertragener Code
 
 Keiner.
