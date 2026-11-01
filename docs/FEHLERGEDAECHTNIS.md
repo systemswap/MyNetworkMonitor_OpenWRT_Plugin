@@ -222,3 +222,22 @@ Regeln:
 - **Im Code:** `htdocs/…/scan.js` (`STYLE`, `.mnm-name`).
 - **Abgesichert durch:** `tests/ui/check_page.py` („device table fits its area“ bei 1366×768).
 
+
+## Nr. 14 – Repository: kompilierte Python-Datei mit dem Home-Pfad eingecheckt
+
+- **Entdeckt:** 01.11.2026, vor dem ersten Push (Durchsicht aller Dateien der Historie von Hand; die Prüfung der
+  Historie sucht nicht in Binärdateien). Eingecheckt seit 0.0.10-beta. **Behoben:** im aktuellen Stand mit dem Commit
+  „Kompilierte Python-Datei aus dem Repository genommen“, in der Historie am 01.11.2026 umgeschrieben (vor dem ersten
+  Push, also ohne Force-Push).
+- **Was und wo:** `tests/ui/__pycache__/marionette.cpython-313.pyc` – Python legt sie beim Start des Maustests an; sie
+  enthält den vollständigen Pfad der Quelldatei samt Benutzername.
+- **Warum:** `.gitignore` schloss `__pycache__/` nicht aus, und `git add -A` nahm die Datei mit.
+- **Lösung:** `__pycache__/` und `*.pyc` in `.gitignore`; Datei mit dem Bereinigungs-Werkzeug der gemeinsamen Vorlage
+  (`--entfernen "tests/ui/__pycache__"`) aus allen Commits entfernt, vorher an einer Kopie geprüft: nur diese Datei
+  fehlt in den 9 betroffenen Commits, Nachrichten und aktueller Dateibaum unverändert. Sicherung des alten Stands als
+  Bundle im lokalen Testordner.
+- **Nicht tun:** Hilfsprogramme im Repository starten, ohne ihre Ausgaben auszuschließen; vor dem ersten Push nur der
+  Textprüfung trauen – Binärdateien der Historie von Hand ansehen (`git log --all --name-only`).
+- **Im Code:** `.gitignore`.
+- **Abgesichert durch:** `.gitignore`; Durchsicht der Dateiliste der Historie vor jedem ersten Push (`Regeln/GitHub.md`
+  der gemeinsamen Vorlage, Schritt 2).
