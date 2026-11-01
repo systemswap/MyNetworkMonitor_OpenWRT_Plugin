@@ -279,3 +279,19 @@ Regeln:
 - **Nicht tun:** echte Adressen, Gerätenamen oder Zitate mit solchen Angaben in Doku, Tests oder Commits übernehmen;
   die Prüfung auf persönliche Angaben und den Commit in einem Befehl verketten – erst prüfen, dann committen.
 - **Abgesichert durch:** Durchsicht der vorgemerkten Änderungen in einem eigenen Schritt vor jedem Commit.
+
+## Nr. 17 – Seite: Adressen in der Spalte „Device“ mitten in der Zahl umgebrochen
+
+- **Entdeckt:** 01.11.2026, Version 0.0.27-beta (Bildschirmfoto des Maustests bei 1366×768, sinngemäß „192.0.2.2“ / „01“ für 192.0.2.201 –
+  hier mit einer Dokumentationsadresse beschrieben). **Behoben:** 0.0.28-beta.
+- **Was:** Geräte ohne Namen zeigen in „Device“ ihre Adresse; bei schmaler Tabelle brach sie an beliebiger Stelle um.
+- **Warum:** Die Regel aus Nr. 13 (`overflow-wrap:anywhere`, damit lange Namen die Tabelle nicht verbreitern) galt
+  auch für Adressen; deren kleinste Breite war damit ein Zeichen.
+- **Lösung:** Eine Adresse an Stelle des Namens bricht nie um (`strong.mnm-address`, `white-space:nowrap`); Namen
+  weiter wie in Nr. 13. Den Platz dafür gibt ein etwas kleinerer Innenabstand der Zellen unserer Tabelle.
+- **Nicht tun:** eine Umbruchregel für Namen ohne Blick auf die anderen Werte der Spalte setzen; nach einer Änderung
+  der Breiten nur eine Auflösung prüfen.
+- **Im Code:** `htdocs/…/scan.js` (`STYLE`, Zeile der Tabelle).
+- **Abgesichert durch:** `tests/ui/check_page.py` („addresses in the device column stay on one line“, vergleicht die
+  Angabe in „Device“ mit der Spalte IPV4; mit dem alten Stand 10 Treffer bei 1366×768) und „device table fits its
+  area“.

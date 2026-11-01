@@ -46,10 +46,14 @@ const STYLE = `
 @media (max-width: 1250px) { .mnm-main { flex-direction:column; } .mnm-details { position:static; width:auto; flex-basis:auto; } }
 .mnm-table table { width:100%; }
 .mnm-table td { vertical-align:top; }
+/* Eight columns: a little less space between them than the theme gives, so that the table fits 1366 pixels. */
+.mnm-table td, .mnm-table th { padding-left:.45em !important; padding-right:.45em !important; }
 .mnm-table td.mnm-nowrap { white-space:nowrap; }
 .mnm-table td.mnm-vendor { max-width:12em; }
 /* Host names can be long and without a break point (e.g. a name with the MAC address in it). */
 .mnm-table td.mnm-name { max-width:13em; overflow-wrap:anywhere; }
+/* An address in place of the name is short and must not break in the middle of a number. */
+.mnm-table td.mnm-name strong.mnm-address { white-space:nowrap; }
 .mnm-table tr.mnm-row { cursor:pointer; }
 .mnm-table tr.mnm-net-head td { background:rgba(128,128,128,.12); font-weight:bold; padding-top:.6em; }
 .mnm-table tr.mnm-row.selected td { background:rgba(11,124,139,.15); }
@@ -394,7 +398,7 @@ return view.extend({
 			}, [
 				E('td', { 'class': 'td mnm-nowrap' }, E('span', { 'class': 'mnm-dot' + (online(d) ? ' online' : ''),
 					'title': online(d) ? _('seen in the last scan') : _('not seen in the last scan') })),
-				E('td', { 'class': 'td mnm-name', 'title': d.hostname || '' }, [ E('strong', {}, displayName(d)), E('br'), E('span', { 'class': 'mnm-sub' }, d.network || '') ]),
+				E('td', { 'class': 'td mnm-name', 'title': d.hostname || '' }, [ E('strong', { 'class': d.hostname ? '' : 'mnm-address' }, displayName(d)), E('br'), E('span', { 'class': 'mnm-sub' }, d.network || '') ]),
 				E('td', { 'class': 'td mnm-mono mnm-nowrap' }, d.ipv4 || '-'),
 				E('td', { 'class': 'td mnm-mono mnm-nowrap', 'title': v6.join('\n') }, v6.length ? [ shortV6(v6[0]), v6.length > 1 ? E('span', { 'class': 'mnm-sub' }, ' +' + (v6.length - 1)) : '' ] : '-'),
 				E('td', { 'class': 'td mnm-vendor' }, d.vendor || '-'),

@@ -175,6 +175,13 @@ for width, height in [(1920, 1080), (1366, 768)]:
             check(ff.js(count) == n_all and not ff.js("return document.getElementById('mnm-online').checked"),
                   "reset filters clears all fields")
 
+        # An address in place of a name stays on one line
+        broken = ff.js("let n=0; document.querySelectorAll('tr.mnm-row').forEach(r=>{"
+                       "const name=r.querySelector('td:nth-child(2) strong'), address=r.querySelector('td:nth-child(3)');"
+                       "if (name && address && name.textContent.trim()==address.textContent.trim() && name.getClientRects().length > 1) n++});"
+                       "return n")
+        check(broken == 0, "addresses in the device column stay on one line (%d broken)" % broken)
+
         # At most four services side by side, ports in at most two lines
         widest = ff.js("let m=0; document.querySelectorAll('.mnm-chips').forEach(c=>{const t=[...c.children].map(x=>Math.round(x.getBoundingClientRect().top));"
                        "const n=t.filter(v=>v==t[0]).length; if(n>m) m=n}); return m")
