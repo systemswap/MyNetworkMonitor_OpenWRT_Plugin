@@ -131,7 +131,8 @@ void mnm_devices_write_json(struct mnm_devices *devices, FILE *out)
 		const char *name;
 	} sources[] = {
 		{ MNM_SEEN_ARP, "arp" }, { MNM_SEEN_PING, "ping" }, { MNM_SEEN_NEIGHBOR, "neighbor" },
-		{ MNM_SEEN_LEASE, "lease" }, { MNM_SEEN_TCP, "tcp" },
+		{ MNM_SEEN_LEASE, "lease" }, { MNM_SEEN_TCP, "tcp" }, { MNM_SEEN_SSDP, "ssdp" }, { MNM_SEEN_WSD, "wsd" },
+		{ MNM_SEEN_ONVIF, "onvif" }, { MNM_SEEN_MDNS, "mdns" }, { MNM_SEEN_NETBIOS, "netbios" },
 	};
 
 	/* Sorted through an index: the list itself keeps its order, so that

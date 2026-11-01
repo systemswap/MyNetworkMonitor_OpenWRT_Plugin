@@ -406,6 +406,13 @@ const methods = {
 								push(probes, sprintf('%s=%s', id, join(',', map(item.udp, p => '' + p))));
 					}
 
+			// The discovery methods of the chosen services ("broadcast" in the catalog).
+			const broadcast = [];
+			for (let g in catalog.groups)
+				for (let item in g.items)
+					if (index(services, item.id) >= 0 && item.broadcast != null && index(broadcast, item.broadcast) < 0)
+						push(broadcast, item.broadcast);
+
 			let targets;
 			if (length(target) > 0) {
 				if (!match(target, IPV4_PATTERN))
@@ -445,6 +452,8 @@ const methods = {
 				scan += ' --no-ping';
 			if (index(services, 'dnsnames') >= 0)
 				scan += ' --names';
+			if (length(broadcast) > 0)
+				scan += ' --broadcast ' + shell_quote(join(',', broadcast));
 			for (let p in probes)
 				scan += ' --probe ' + shell_quote(p);
 			const vendors = store_dir() + '/manuf';

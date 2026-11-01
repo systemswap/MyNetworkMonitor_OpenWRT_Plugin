@@ -29,4 +29,7 @@ void test_probes_steps(void);
 /* The tests of the UDP probes (test_udp.c). */
 void test_probes_udp(void);
 
+/* The tests of the discovery methods (test_bc.c). */
+void test_bc(void);
+
 #endif

@@ -550,6 +550,7 @@ int main(void)
 	test_dns_names();
 	test_probes_steps();
 	test_probes_udp();
+	test_bc();
 	printf("%d checks, %d failed\n", checks, failures);
 	return failures ? 1 : 0;
 }

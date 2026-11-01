@@ -11,16 +11,15 @@ Ausbaustufen, jede für sich benutzbar:
 1. **Geräteliste im Test bestätigen** (gebaut in 0.0.4-beta): Seite mit Tabelle und Details vom Nutzer ansehen lassen;
    Hersteller und MAC-Adressen auf einem Gerät im selben Netzsegment prüfen (MX4200 oder VM an `br0`).
 2. **Dienst-Sonden, Details** (Stufe 3b fertig mit 0.0.23-beta): OPC-UA-Endpunkte, SECS/GEM-Modell (S1F1).
-3. **Rundrufe:** SSDP/UPnP samt Gerätebeschreibung, NetBIOS-Namensabfrage, ONVIF (WS-Discovery).
-4. **SNMP, Zertifikate:** SNMP v2c (Systemname, Beschreibung), HTTPS-Erkennung und Zertifikate von Webseiten
+3. **SNMP, Zertifikate:** SNMP v2c (Systemname, Beschreibung), HTTPS-Erkennung und Zertifikate von Webseiten
    (Aussteller, Gültigkeit, Namen) über mbedTLS.
 
-5. **Gerätesuche gründlicher:** eine zweite ARP-Runde für Adressen ohne Antwort (Geräte im WLAN-Stromsparmodus
+4. **Gerätesuche gründlicher:** eine zweite ARP-Runde für Adressen ohne Antwort (Geräte im WLAN-Stromsparmodus
    verpassen eine einzelne Anfrage). Grund: Sonden gehen nur an Geräte der Tabelle (`docs/Architektur.md`), ein
    übersehenes Gerät bekommt keine. In anderen Netzen hinter einem Router gilt als Gerät, wer auf Ping antwortet
    (Entscheidung des Nutzers, 01.11.2026) – kein zusätzliches Anklopfen an TCP-Ports.
 
-6. **Test im Firmennetz** (Wunsch des Nutzers, 01.11.2026; im Heimnetz gibt es diese Geräte nicht). Die Sonden
+5. **Test im Firmennetz** (Wunsch des Nutzers, 01.11.2026; im Heimnetz gibt es diese Geräte nicht). Die Sonden
    sind gegen nachgespielte Geräte getestet und im Heimnetz ohne Fehlerkennung, aber noch an keinem echten Gerät:
    - MS-SQL auf 1433 (Version, Verschlüsselung) und eine benannte Instanz über den SQL-Server-Browser (UDP 1434),
    - OPC UA (4840),
@@ -30,7 +29,8 @@ Ausbaustufen, jede für sich benutzbar:
    - SECS/GEM (5000-5002): angenommene Sitzung, belegte Sitzung (nur Ablehnung oder Schweigen),
    - BACnet (UDP 47808) mit Name und Hersteller,
    - DHCP hinter einem Relay (Serverkennung),
-   - SMB-Versionen an Windows-Servern (auch SMB 1.0, wo noch an).
+   - SMB-Versionen an Windows-Servern (auch SMB 1.0, wo noch an),
+   - ONVIF-Kameras (im Heimnetz keine), NetBIOS mit Domänen statt Arbeitsgruppen.
    Dabei Laufzeit des ganzen Scans und Last auf dem Router ansehen. Echte Antworten als Testfälle übernehmen
    (Adressen und Namen erfunden, Mitschnitte nur im lokalen Testordner).
 

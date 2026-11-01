@@ -214,3 +214,29 @@ Zeitlich geordnet, neue ans Ende.
 - **Abweichung:** Die siebte Anfrage des Desktop-Programms mit allen Dialekten, deren Antwort es nicht auswertet,
   entfällt.
 
+### 01.11.2026 – Suche per Multicast und NetBIOS-Namen
+
+- **Entschieden:** SSDP/UPnP, WS-Discovery, ONVIF und mDNS laufen in der Gerätesuche nach ARP und Ping, gleichzeitig
+  in jedem eigenen Netz der Ziele, mit den Paketen, Wiederholungen und Abständen des Desktop-Programms: SSDP einmal
+  M-SEARCH an 239.255.255.250:1900; WS-Discovery dreimal die Probe nach 2009, dann dreimal nach 2005 im Abstand von
+  200 ms an 239.255.255.250:3702, jede mit neuer Nachrichtenkennung; ONVIF dreimal dieselbe Probe im Abstand von
+  500 ms; mDNS 27 PTR-Anfragen im Abstand von 100 ms an 224.0.0.251:5353. Zugehört wird insgesamt 6,5 s. Geräte, die
+  nur darauf antworten, kommen in die Liste – nur aus den gewählten Bereichen – und damit in die Portsuche.
+  NetBIOS (Knotenstatus, UDP 137) fragt danach jedes Gerät der Liste einzeln, bis zu zweimal 5 s, 50 zugleich.
+- **Pakete** Byte für Byte die des Desktop-Programms (`scanner/src/bc_packets.c`, abgeglichen mit einem Skript); die
+  Nachrichtenkennung (GUID nach .NET-Form „D“) und die NetBIOS-Transaktionsnummer sind wie dort zufällig.
+- **Namen:** mDNS (Adresseintrag des Absenders) und NetBIOS füllen den Gerätenamen, wenn die DHCP-Zuteilungen keinen
+  kennen; NetBIOS läuft nach der DNS-Abfrage und füllt nur, was dann noch fehlt.
+- **Abweichungen in der Auswertung** (gesendet wird dasselbe):
+  - SSDP: Die Gerätebeschreibung (LOCATION) wird einmal je Gerät geladen und ihr Name, Hersteller und Modell
+    gemeldet – das Desktop-Programm lädt sie je Antwort und verwirft sie. Geladen wird nur über HTTP und nur von der
+    Adresse des Geräts selbst, die Anfrage ist die des Desktop-Programms (nur `Host`).
+  - ONVIF: Die zwei Folgeabrufe des Desktop-Programms (`…/media_service`, `…/network_service`) entfallen – sie gehen
+    an Adressen, die ONVIF nicht kennt, und ihr Ergebnis wird nie gemeldet. Erkannt werden auch Antworten der Form
+    2009; von mehreren Dienstadressen gilt die erste.
+  - mDNS: nur Antworten (QR-Bit), Fragen über ihre Anzahl übersprungen, die eigenen Anfragen des Routers zählen
+    nicht; die Adresse ist die des Absenders, nicht die eines Adresseintrags.
+  - SSDP-Kopfzeilen werden nur am Zeilenanfang erkannt (`X-SERVER:` ist kein `SERVER:`).
+  - Empfangen wird mit `poll` statt wechselnder, liegengelassener Empfangsaufträge; der Router sieht mindestens alle
+    Antworten, die das Desktop-Programm sieht.
+

@@ -27,6 +27,11 @@ enum {
 	MNM_SEEN_NEIGHBOR = 4,   /* in the neighbour table of the router */
 	MNM_SEEN_LEASE = 8,      /* has a DHCP lease of the router */
 	MNM_SEEN_TCP = 16,       /* answered on a TCP port */
+	MNM_SEEN_SSDP = 32,      /* answered an SSDP search */
+	MNM_SEEN_WSD = 64,       /* answered a WS-Discovery probe */
+	MNM_SEEN_ONVIF = 128,    /* answered the ONVIF camera probe */
+	MNM_SEEN_MDNS = 256,     /* answered an mDNS query */
+	MNM_SEEN_NETBIOS = 512,  /* answered a NetBIOS node status request */
 };
 
 /* A service recognised by its answer, not only by an open port. */

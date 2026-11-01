@@ -4,13 +4,13 @@
 	"groups": [
 		{ "id": "discovery", "name": "Finding devices", "icon": "🔎", "items": [
 			{ "id": "ping", "name": "Ping", "hint": "Finds devices behind another router; ARP and the neighbour table always run", "available": true, "default": true },
-			{ "id": "ssdp", "name": "SSDP / UPnP", "hint": "Media servers, TVs, routers, smart home", "available": false, "default": true },
-			{ "id": "mdns", "name": "mDNS", "hint": "Apple devices, printers, speakers", "available": false, "default": true },
-			{ "id": "wsd", "name": "WS-Discovery", "hint": "Windows computers, printers, scanners", "available": false, "default": true }
+			{ "id": "ssdp", "name": "SSDP / UPnP", "hint": "Media servers, TVs, routers, smart home", "default": true, "broadcast": "ssdp" },
+			{ "id": "mdns", "name": "mDNS", "hint": "Apple devices, printers, speakers", "default": true, "broadcast": "mdns" },
+			{ "id": "wsd", "name": "WS-Discovery", "hint": "Windows computers, printers, scanners", "default": true, "broadcast": "wsd" }
 		] },
 		{ "id": "identify", "name": "Identifying devices", "icon": "🪪", "items": [
 			{ "id": "dnsnames", "name": "Names from DNS", "hint": "Reverse lookup at the router and the home router before it", "available": true, "default": true },
-			{ "id": "netbios", "name": "NetBIOS names", "hint": "Computer names in Windows and Samba networks", "available": false, "default": true },
+			{ "id": "netbios", "name": "NetBIOS names", "hint": "Computer names in Windows and Samba networks", "default": true, "broadcast": "netbios" },
 			{ "id": "webpage", "name": "Web page and certificate", "hint": "Title of the web interface, certificate issuer and expiry", "available": false, "default": true },
 			{ "id": "snmp", "name": "SNMP", "hint": "Name and description of printers, switches and NAS", "available": false, "default": true }
 		] },
@@ -34,7 +34,7 @@
 			{ "id": "smb", "name": "SMB (Windows file sharing)", "tcp": [139, 445], "default": true, "probes": ["smb"] }
 		] },
 		{ "id": "cameras", "name": "Cameras", "icon": "📷", "items": [
-			{ "id": "onvif", "name": "ONVIF cameras", "hint": "WS-Discovery for cameras", "available": false, "default": true }
+			{ "id": "onvif", "name": "ONVIF cameras", "hint": "WS-Discovery for cameras", "default": true, "broadcast": "onvif" }
 		] },
 		{ "id": "sql", "name": "SQL databases", "icon": "🗄️", "items": [
 			{ "id": "mssql", "name": "MS-SQL Server", "tcp": [1433], "udp": [1434], "default": false, "probes": ["mssqlserver"], "udp_probes": ["mssqlbrowser"] },

@@ -79,7 +79,7 @@ Root hat ein zufälliges Passwort (LuCI), SSH mit einem eigenen Schlüssel; beid
 Die Pakete in `scanner/src/probes.c` müssen Byte für Byte denen des Desktop-Programms entsprechen. Vor jedem Commit,
 der sie berührt, vergleicht ein Skript im lokalen Testordner jedes Array mit dem C#-Quellcode (Länge und jedes Byte,
 gebaute Pakete wie Oracle-TNS und DNS nachgerechnet); nur bei „all identical“ wird committet. Für die Pakete in
-`scanner/src/probes_steps.c` und `scanner/src/probes_udp.c` macht das ein zweites Skript ebenso (jedes Array `pkt_*` gegen das Paket gleichen
+`scanner/src/probes_steps.c`, `probes_udp.c`, `probes_smb.c` und `bc_packets.c` macht das ein zweites Skript ebenso (jedes Array `pkt_*` gegen das Paket gleichen
 Namens, das ein Extraktor aus dem C#-Quellcode liest, gebaute Pakete aus dem Builder-Code nachgerechnet). Die Prüfregeln haben
 Tests in `scanner/tests/tests.c` (je Sonde eine passende und fremde Antworten, alle Prüfungen auf Antworten von 0 bis
 64 Byte unter AddressSanitizer).
@@ -121,3 +121,4 @@ nicht). Vorher prüfen, dass die Geräteliste nicht leer ist; sonst ein Gerät m
 | 01.11.2026 | 0.0.22-beta | Stufe 3b, UDP: 5 Pakete identisch; 222 Prüfungen grün (Läufe gegen nachgespielten Namensserver, BACnet-Gerät, SQL-Server-Browser, geschlossenen Port); im Heimnetz: DNS über UDP an Gateway, NAS und VM, DHCP-Server am Gateway erkannt, kein BACnet oder MS-SQL fälschlich; Maustest ohne Befund, Details zeigen „53/udp“ |
 | 01.11.2026 | 0.0.23-beta | SMB-Versionen: 6 Pakete identisch (3.1.1 mit Verhandlungsangabe, wie Desktop 7.3.0.35); 228 Prüfungen grün (nachgespielter Dateiserver nimmt 3.1.1 nur mit Verhandlungsangabe an); im Heimnetz an zwei Geräten 2.0.2 bis 3.1.1 erkannt, 1.0 abgeschaltet. Maustest auf Wunsch des Nutzers zurückgestellt bis zum Abschluss der Stufe |
 | 01.11.2026 | 0.0.24-beta | Zusammenführung im Backend: `check_merge.py` mit altem Stand 4 Fehler, mit neuem ohne Befund; Bestand des Routers danach unverändert |
+| 01.11.2026 | 0.0.25-beta | Suche per Multicast und NetBIOS: 32 Pakete identisch (Prüfskript erfasst jetzt auch nicht-statische Arrays – vorher wären 5 ungeprüft geblieben); 268 Prüfungen grün (Auswertung aller fünf Verfahren an erfundenen Antworten, HTTP-Abruf mit chunked-Antwort gegen Testserver, Anfrage genau die des Desktop-Programms); im Heimnetz: 7 Geräte über SSDP mit Name, Hersteller und Modell, 13 über mDNS, 3 über WS-Discovery (Drucker/Scanner, Windows-Rechner), 3 über NetBIOS; ganzer Lauf 18,5 s |

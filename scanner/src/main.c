@@ -20,6 +20,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "bc_discover.h"
 #include "devices.h"
 #include "discover.h"
 #include "dnsname.h"
@@ -264,6 +265,7 @@ static void usage(FILE *out)
 	      "  --parallel N        TCP connections at the same time (1-256, default 64)\n"
 	      "  --no-ping           find devices by ARP and the neighbour table only\n"
 	      "  --names             look up device names by reverse DNS\n"
+	      "  --broadcast LIST    discovery by ssdp, wsd, onvif, mdns and netbios (any of them, comma-separated)\n"
 	      "  --probe ID=PORTS    recognise a service on these ports by its answer, e.g. ssh=22 (repeatable)\n"
 	      "  --allow-public      also scan addresses outside the private ranges\n"
 	      "  --version           print the version\n",
@@ -297,6 +299,7 @@ int main(int argc, char **argv)
 		{ "no-ping", no_argument, NULL, 'N' },
 		{ "probe", required_argument, NULL, 'b' },
 		{ "names", no_argument, NULL, 'n' },
+		{ "broadcast", required_argument, NULL, 'B' },
 		{ "version", no_argument, NULL, 'V' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 },
@@ -308,6 +311,7 @@ int main(int argc, char **argv)
 	struct mnm_tcpscan_options tcp = { .parallel = 64, .timeout_ms = 800 };
 	char err[200];
 	int allow_public = 0, ping = 1, names = 0;
+	unsigned int broadcast = 0;
 	struct probe_map maps[MAX_PROBE_MAPS];
 	size_t map_count = 0;
 	int c;
@@ -334,6 +338,12 @@ int main(int argc, char **argv)
 		case 'P': allow_public = 1; break;
 		case 'N': ping = 0; break;
 		case 'n': names = 1; break;
+		case 'B':
+			if (mnm_bc_parse_methods(optarg, &broadcast, err, sizeof(err)) != 0) {
+				fprintf(stderr, "--broadcast: %s\n", err);
+				return 2;
+			}
+			break;
 		case 'b':
 			if (map_count == MAX_PROBE_MAPS || parse_probe_map(optarg, &maps[map_count], err, sizeof(err)) != 0) {
 				fprintf(stderr, "--probe: %s\n", map_count == MAX_PROBE_MAPS ? "too many" : err);
@@ -391,6 +401,19 @@ int main(int argc, char **argv)
 	mnm_discover_vendors(vendors, &scan.devices);
 	write_output(&scan);
 
+	/* The multicast searches: devices that answer only them (cameras, TVs in
+	 * standby) get into the list and thus into the port scan. Their MAC
+	 * addresses are in the neighbour table once they have answered. */
+	struct mnm_bc_options bc = { .methods = broadcast, .stop = &stop_requested, .on_change = on_discover_change,
+				     .context = &scan };
+	if (!interrupted && mnm_bc_discover(&targets, &scan.devices, &bc) == 1)
+		interrupted = 1;
+	if (broadcast & ~(unsigned int)MNM_BC_NETBIOS) {
+		mnm_discover_neighbors(&targets, &scan.devices);
+		mnm_discover_vendors(vendors, &scan.devices);
+		write_output(&scan);
+	}
+
 	/* Names by reverse DNS: first the router's own name server (dnsmasq knows the
 	 * devices it handed addresses to), then for the rest the name server it asks
 	 * itself and the default gateway - in a home network behind another router
@@ -417,6 +440,10 @@ int main(int argc, char **argv)
 		}
 		write_output(&scan);
 	}
+
+	/* NetBIOS names, after DNS: a name from there fills only what is still missing. */
+	if (!interrupted && mnm_bc_netbios(&scan.devices, &bc) == 1)
+		interrupted = 1;
 
 	/* Phase 2: the TCP ports of every device found. */
 	int status = 0;
