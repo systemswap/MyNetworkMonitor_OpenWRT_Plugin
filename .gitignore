@@ -1,0 +1,17 @@
+# Bau-Ausgaben
+bin/
+obj/
+published/
+artifacts/
+# IDEs (persönliche Einstellungen)
+.vs/
+.idea/
+*.user
+*.suo
+# Protokolle und Zugangsdaten nie einchecken
+*.log
+.env
+# Bau-Ausgaben des Scanprogramms und der Tests
+/scanner/build/
+*.o
+*.apk
