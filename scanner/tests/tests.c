@@ -98,6 +98,31 @@ static void test_targets(void)
 	CHECK(t.ranges == NULL && t.total == 0);
 }
 
+static void test_private_only(void)
+{
+	struct mnm_targets t;
+	char err[200];
+	const char *own[] = { "10.0.0.1", "172.20.0.0/16", "172.31.255.254", "192.168.123.0/24", "169.254.1.1",
+			      "127.0.0.1", "192.168.0.1-192.168.255.254" };
+	const char *foreign[] = { "8.8.8.8", "192.0.2.0/24", "172.32.0.1", "172.15.255.255", "192.169.0.1",
+				  "11.0.0.1", "10.255.255.250-11.0.0.5", "100.64.0.1" };
+
+	for (size_t i = 0; i < sizeof(own) / sizeof(own[0]); i++) {
+		CHECK(mnm_targets_parse(own[i], &t, err, sizeof(err)) == 0);
+		CHECK(mnm_targets_all_private(&t, err, sizeof(err)) == 1);
+		mnm_targets_free(&t);
+	}
+	for (size_t i = 0; i < sizeof(foreign) / sizeof(foreign[0]); i++) {
+		CHECK(mnm_targets_parse(foreign[i], &t, err, sizeof(err)) == 0);
+		CHECK(mnm_targets_all_private(&t, err, sizeof(err)) == 0 && strstr(err, "not a private network"));
+		mnm_targets_free(&t);
+	}
+	/* one public entry spoils the whole list */
+	CHECK(mnm_targets_parse("192.168.1.0/24,203.0.113.5", &t, err, sizeof(err)) == 0);
+	CHECK(mnm_targets_all_private(&t, err, sizeof(err)) == 0 && strstr(err, "203.0.113.5"));
+	mnm_targets_free(&t);
+}
+
 static void test_ports(void)
 {
 	struct mnm_ports p;
@@ -222,6 +247,7 @@ int main(void)
 {
 	test_ipv4();
 	test_targets();
+	test_private_only();
 	test_ports();
 	test_json();
 	test_tcpscan_loopback();

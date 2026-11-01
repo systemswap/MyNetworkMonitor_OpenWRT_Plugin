@@ -109,7 +109,7 @@ return view.extend({
 		s.addremove = false;
 
 		let o = s.option(form.Value, 'targets', _('Ranges'),
-			_('Addresses, ranges or networks, separated by commas - for example 192.168.1.0/24 or 192.168.1.1-254. At most 65536 addresses.'));
+			_('Addresses, ranges or networks, separated by commas - for example 192.168.1.0/24 or 192.168.1.1-254. At most 65536 addresses. Only private networks are scanned (10.x, 172.16-31.x, 192.168.x), never addresses on the internet.'));
 		o.rmempty = false;
 		o.validate = validateTargets;
 

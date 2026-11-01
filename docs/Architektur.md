@@ -74,3 +74,12 @@ Zeitlich geordnet, neue ans Ende.
   OpenWrt, und das Paket hängt von einer Bibliothek weniger ab.
 - **Verworfen:** libubox (uloop, blobmsg) – gibt es außerhalb von OpenWrt nicht als Paket, Tests auf dem PC
   bräuchten einen eigenen Bau davon.
+
+### 01.11.2026 – Nur eigene Netze scannen
+
+- **Entschieden:** Das Scanprogramm nimmt ab Werk nur private und lokale Adressen an (10/8, 172.16/12, 192.168/16,
+  169.254/16, 127/8); ein Eintrag mit einer öffentlichen Adresse lässt den ganzen Scan ablehnen. `--allow-public`
+  hebt das auf, die Seite bietet es nicht an (Wunsch des Nutzers: nur das Heimnetz scannen).
+- **Warum:** Ein Tippfehler im Bereich soll nie Rechner im Internet treffen. Das Internet bleibt für andere
+  Funktionen erreichbar (z. B. Herstellerliste laden) – gesperrt ist nur das Scannen.
+

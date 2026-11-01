@@ -203,6 +203,7 @@ static void usage(FILE *out)
 	      "  --progress FILE     progress as JSON, updated while the scan runs\n"
 	      "  --timeout-ms N      time per connection attempt (50-10000, default 800)\n"
 	      "  --parallel N        connections at the same time (1-256, default 64)\n"
+	      "  --allow-public      also scan addresses outside the private ranges\n"
 	      "  --version           print the version\n",
 	      out);
 }
@@ -229,6 +230,7 @@ int main(int argc, char **argv)
 		{ "progress", required_argument, NULL, 'g' },
 		{ "timeout-ms", required_argument, NULL, 'w' },
 		{ "parallel", required_argument, NULL, 'j' },
+		{ "allow-public", no_argument, NULL, 'P' },
 		{ "version", no_argument, NULL, 'V' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 },
@@ -239,6 +241,7 @@ int main(int argc, char **argv)
 	struct mnm_ports ports;
 	struct mnm_tcpscan_options options = { .parallel = 64, .timeout_ms = 800 };
 	char err[160];
+	int allow_public = 0;
 	int c;
 
 	while ((c = getopt_long(argc, argv, "", long_options, NULL)) != -1) {
@@ -259,6 +262,7 @@ int main(int argc, char **argv)
 				return 2;
 			}
 			break;
+		case 'P': allow_public = 1; break;
 		case 'V': puts(MNM_VERSION); return 0;
 		case 'h': usage(stdout); return 0;
 		default: usage(stderr); return 2;
@@ -270,6 +274,11 @@ int main(int argc, char **argv)
 	}
 	if (mnm_targets_parse(targets_text, &targets, err, sizeof(err)) != 0) {
 		fprintf(stderr, "--targets: %s\n", err);
+		return 2;
+	}
+	if (!allow_public && !mnm_targets_all_private(&targets, err, sizeof(err))) {
+		fprintf(stderr, "--targets: %s\n", err);
+		mnm_targets_free(&targets);
 		return 2;
 	}
 	if (mnm_ports_parse(ports_text, &ports, err, sizeof(err)) != 0) {

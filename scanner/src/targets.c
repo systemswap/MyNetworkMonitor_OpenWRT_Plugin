@@ -187,6 +187,47 @@ error:
 	return -1;
 }
 
+/* Private and local blocks as first address and prefix length. */
+static const struct {
+	uint32_t network;
+	unsigned int prefix;
+} private_blocks[] = {
+	{ 0x0a000000u, 8 },   /* 10.0.0.0/8 */
+	{ 0xac100000u, 12 },  /* 172.16.0.0/12 */
+	{ 0xc0a80000u, 16 },  /* 192.168.0.0/16 */
+	{ 0xa9fe0000u, 16 },  /* 169.254.0.0/16 */
+	{ 0x7f000000u, 8 },   /* 127.0.0.0/8 */
+};
+
+/* Whether first..last lies completely inside one private block. A range that
+ * crosses from one block into another is refused as a whole: blocks are not
+ * adjacent, so the gap in between would contain public addresses. */
+static int range_is_private(uint32_t first, uint32_t last)
+{
+	for (size_t i = 0; i < sizeof(private_blocks) / sizeof(private_blocks[0]); i++) {
+		uint32_t mask = 0xffffffffu << (32 - private_blocks[i].prefix);
+		if ((first & mask) == private_blocks[i].network && (last & mask) == private_blocks[i].network)
+			return 1;
+	}
+	return 0;
+}
+
+int mnm_targets_all_private(const struct mnm_targets *targets, char *err, size_t errlen)
+{
+	for (size_t i = 0; i < targets->count; i++) {
+		if (!range_is_private(targets->ranges[i].first, targets->ranges[i].last)) {
+			char a[16], b[16];
+			mnm_format_ipv4(targets->ranges[i].first, a);
+			mnm_format_ipv4(targets->ranges[i].last, b);
+			if (err && errlen)
+				snprintf(err, errlen, "%s-%s is not a private network; only own networks are scanned "
+					 "(10.x, 172.16-31.x, 192.168.x, 169.254.x, 127.x)", a, b);
+			return 0;
+		}
+	}
+	return 1;
+}
+
 uint32_t mnm_targets_at(const struct mnm_targets *targets, uint32_t index)
 {
 	for (size_t i = 0; i < targets->count; i++) {

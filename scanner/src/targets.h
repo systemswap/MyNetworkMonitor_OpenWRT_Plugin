@@ -37,6 +37,16 @@ struct mnm_targets {
  */
 int mnm_targets_parse(const char *text, struct mnm_targets *targets, char *err, size_t errlen);
 
+/*
+ * Whether every address of the list lies in a private or local range:
+ * 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 (RFC 1918), 169.254.0.0/16
+ * (link-local, RFC 3927) and 127.0.0.0/8 (the router itself). The scanner
+ * refuses other addresses unless asked otherwise, so that it only examines the
+ * own networks and never hosts on the internet. On failure the first public
+ * range is described in err.
+ */
+int mnm_targets_all_private(const struct mnm_targets *targets, char *err, size_t errlen);
+
 /* The address at position index (0 <= index < total), in host byte order. */
 uint32_t mnm_targets_at(const struct mnm_targets *targets, uint32_t index);
 
