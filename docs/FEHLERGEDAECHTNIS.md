@@ -124,3 +124,17 @@ Regeln:
   gilt, sobald sie gebaut sind.
 - **Im Code:** `htdocs/…/scan.js` (`renderCatalog`, `updateGroupBoxes`).
 - **Abgesichert durch:** `tests/ui/check_page.py` (jede Gruppe auf und zu, jeder Haken an und aus, Gruppenhaken).
+
+## Nr. 8 – Seite: Gerätename im Detailbereich verschwand beim Scrollen unter der Kopfleiste
+
+- **Entdeckt:** 01.11.2026, Version 0.0.9-beta (Nutzer: beim Scrollen wandert der Name aus dem Sichtfeld; im Maustest
+  nachgestellt – Name 13 px vom oberen Rand, Kopfleiste bis 40 px). **Behoben:** 0.0.10-beta.
+- **Warum:** Der Detailbereich bleibt beim Scrollen stehen (`position: sticky`), aber 1em unter dem Fensterrand. Die
+  Kopfleiste von LuCI bleibt ebenfalls oben stehen und deckte den Anfang des Bereichs zu.
+- **Lösung:** `placeDetails()` misst die Höhe der Kopfleiste (nur wenn sie selbst stehen bleibt) und setzt den Abstand
+  als CSS-Variable `--mnm-top`, auch bei Größenänderung des Fensters; der Bereich ist höchstens so hoch wie der Rest des
+  Fensters und scrollt sonst in sich.
+- **Nicht tun:** feste Abstände für Kopfleisten annehmen – Höhe und Verhalten hängen vom Theme und der Fensterbreite ab.
+- **Im Code:** `htdocs/…/scan.js` (`placeDetails`, Stil `.mnm-details`).
+- **Abgesichert durch:** `tests/ui/check_page.py` – nach dem Scrollen liegt der Name unter der Kopfleiste und der
+  Bereich endet im Fenster, bei 1920×1080 und 1366×768.

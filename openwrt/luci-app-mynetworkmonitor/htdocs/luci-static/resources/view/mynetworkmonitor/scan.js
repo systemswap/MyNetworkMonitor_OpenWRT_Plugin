@@ -41,7 +41,8 @@ const STYLE = `
   margin-left:1em !important; margin-right:1em !important; }
 .mnm-main { display:flex; gap:1em; align-items:flex-start; }
 .mnm-table { flex:1 1 auto; min-width:0; overflow-x:auto; }
-.mnm-details { flex:0 0 300px; width:300px; position:sticky; top:1em; overflow-wrap:anywhere; }
+.mnm-details { flex:0 0 300px; width:300px; position:sticky; top:var(--mnm-top, 1em); max-height:calc(100vh - var(--mnm-top, 1em) - 8px);
+  overflow-y:auto; overflow-wrap:anywhere; }
 @media (max-width: 1250px) { .mnm-main { flex-direction:column; } .mnm-details { position:static; width:auto; flex-basis:auto; } }
 .mnm-table table { width:100%; }
 .mnm-table td { vertical-align:top; }
@@ -401,6 +402,17 @@ return view.extend({
 		return E('span', {}, _('Checking ports: %d of %d (%d%%), %d devices').format(s.done, s.total, percent, devices));
 	},
 
+	// The details stay in view while the table scrolls - below the header bar of
+	// LuCI, which stays at the top of the window as well and would otherwise
+	// cover the name of the device (docs/FEHLERGEDAECHTNIS.md, No. 8). Its height
+	// depends on the theme and the window width, so it is measured.
+	placeDetails() {
+		const header = document.querySelector('header');
+		const pos = header ? getComputedStyle(header).position : '';
+		const top = ((pos == 'sticky' || pos == 'fixed') ? header.offsetHeight : 0) + 8;
+		document.getElementById('mnm-details')?.style.setProperty('--mnm-top', top + 'px');
+	},
+
 	// ------------------------------------------------------------- actions
 
 	update() {
@@ -478,7 +490,8 @@ return view.extend({
 				E('div', { 'id': 'mnm-details', 'class': 'mnm-details' })
 			])
 		]);
-		requestAnimationFrame(() => this.update());
+		requestAnimationFrame(() => { this.placeDetails(); this.update(); });
+		window.addEventListener('resize', () => this.placeDetails());
 		poll.add(() => this.refresh(), 1);
 		return node;
 	},

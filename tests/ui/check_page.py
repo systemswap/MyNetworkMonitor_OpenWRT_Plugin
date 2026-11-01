@@ -114,6 +114,17 @@ for width, height in [(1920, 1080), (1366, 768)]:
             check(stable, "details button stays the same element over refreshes")
             ff.shot("details-%dx%d.png" % (width, height))
 
+            # Scrolling the table keeps the details, and the device name, below the header bar.
+            ff.js("window.scrollTo(0, 700)")
+            ff.wait("return true", 1)
+            gap = ff.js("const hd=document.querySelector('header'), t=document.querySelector('#mnm-details h3');"
+                        "return Math.round(t.getBoundingClientRect().top - (hd ? hd.getBoundingClientRect().bottom : 0))")
+            check(gap >= 0, "device name stays visible below the header while scrolling (%d px)" % gap)
+            bottom = ff.js("return Math.round(document.getElementById('mnm-details').getBoundingClientRect().bottom - innerHeight)")
+            check(bottom <= 0, "details end inside the window while scrolling (%d px)" % bottom)
+            ff.shot("scrolled-%dx%d.png" % (width, height))
+            ff.js("window.scrollTo(0, 0)")
+
         # At most four services side by side, ports in at most two lines
         widest = ff.js("let m=0; document.querySelectorAll('.mnm-chips').forEach(c=>{const t=[...c.children].map(x=>Math.round(x.getBoundingClientRect().top));"
                        "const n=t.filter(v=>v==t[0]).length; if(n>m) m=n}); return m")
