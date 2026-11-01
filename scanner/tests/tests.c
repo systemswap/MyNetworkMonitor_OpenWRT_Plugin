@@ -322,6 +322,12 @@ static void test_vendors(void)
 				    sizeof(name)) == 1 && bits == 36 && prefix == 0x001bc5000000ull);
 	CHECK(mnm_vendor_parse_line("8C:1F:64:A0:00:00/28\tShortOnly", &prefix, &bits, name, sizeof(name)) == 1 &&
 	      bits == 28 && strcmp(name, "ShortOnly") == 0);
+	/* the real file pads its columns with spaces (docs/FEHLERGEDAECHTNIS.md, No. 6) */
+	CHECK(mnm_vendor_parse_line("00:01:E6         \tHewlettPacka\tHewlett Packard\n", &prefix, &bits, name, sizeof(name)) == 1 &&
+	      prefix == 0x0001e6000000ull && strcmp(name, "Hewlett Packard") == 0);
+	CHECK(mnm_vendor_parse_line("00:1B:C5:00:00:00/36    \tShort       \n", &prefix, &bits, name, sizeof(name)) == 1 &&
+	      strcmp(name, "Short") == 0);
+	CHECK(mnm_vendor_parse_line("00:01:E6         \t   \t   \n", &prefix, &bits, name, sizeof(name)) == 0);
 	CHECK(mnm_vendor_parse_line("# comment", &prefix, &bits, name, sizeof(name)) == 0);
 	CHECK(mnm_vendor_parse_line("00:00:0C", &prefix, &bits, name, sizeof(name)) == 0);
 	CHECK(mnm_vendor_parse_line("00:00:0C:00:00:00\tX", &prefix, &bits, name, sizeof(name)) == 0);

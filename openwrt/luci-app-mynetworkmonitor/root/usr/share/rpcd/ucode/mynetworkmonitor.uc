@@ -289,6 +289,7 @@ const methods = {
 				error: (error != null && length(error) > 0) ? error : null,
 				last_scan: (running && scan) ? scan.started : store.last_scan,
 				persist: store_dir() == FLASH_STORE,
+				version: trim(readfile('/usr/share/mynetworkmonitor/version') ?? ''),
 				devices: store.devices,
 				vendors: vendor_info(store_dir())
 			};

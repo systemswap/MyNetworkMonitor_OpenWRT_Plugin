@@ -96,6 +96,15 @@ int mnm_lease_parse_line(const char *line, uint8_t mac[6], uint32_t *ip, char *h
 	return 1;
 }
 
+/* Moves the bounds of a field inward past spaces. */
+static void trim(const char **start, const char **end)
+{
+	while (*start < *end && **start == ' ')
+		(*start)++;
+	while (*end > *start && (*end)[-1] == ' ')
+		(*end)--;
+}
+
 int mnm_vendor_parse_line(const char *line, uint64_t *prefix, unsigned int *bits, char *name, size_t namelen)
 {
 	size_t len, slen, flen;
@@ -132,10 +141,26 @@ int mnm_vendor_parse_line(const char *line, uint64_t *prefix, unsigned int *bits
 		return 0;   /* a full address without length is no prefix */
 	}
 
-	const char *sname = field(p + len, "\t", &slen);
-	if (slen == 0)
+	/* The columns are separated by tabs and padded with spaces for alignment
+	 * ("00:01:E6         <tab>HewlettPacka<tab>Hewlett Packard"), so each field
+	 * is the text between two tabs with the spaces around it removed. */
+	const char *tab = strchr(p + len, '\t');
+	if (!tab)
 		return 0;
-	const char *fname = field(sname + slen, "\t", &flen);
+	const char *sname = tab + 1;
+	const char *send = sname;
+	while (*send && *send != '\t' && *send != '\n' && *send != '\r')
+		send++;
+	const char *fname = (*send == '\t') ? send + 1 : send;
+	const char *fend = fname;
+	while (*fend && *fend != '\t' && *fend != '\n' && *fend != '\r')
+		fend++;
+	trim(&sname, &send);
+	trim(&fname, &fend);
+	slen = (size_t)(send - sname);
+	flen = (size_t)(fend - fname);
+	if (slen == 0 && flen == 0)
+		return 0;
 	if (flen)
 		copy_name(name, namelen, fname, flen);
 	else

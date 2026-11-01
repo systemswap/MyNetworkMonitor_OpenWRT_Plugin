@@ -70,7 +70,19 @@ Netzbrücke des Rechners. OpenWrt ist dafür reines Endgerät: `lan` holt die Ad
 `ignore=1`, `dhcpv4`, `dhcpv6` und `ra` auf `disabled` – sonst verteilte es Adressen und IPv6-Ankündigungen im Heimnetz.
 Root hat ein zufälliges Passwort (LuCI), SSH mit einem eigenen Schlüssel; beides nur im lokalen Testordner.
 
+### Bedienung wie ein Nutzer (Maustest)
+
+    python3 tests/ui/check_page.py <adresse des routers> <datei mit dem root-passwort>
+
+Steuert Firefox ohne sichtbares Fenster über seine eingebaute Fernsteuerung (Marionette, kein Zusatzpaket) mit eigenem
+Profil im Testordner; Telemetrie, Berichte und Updates sind in diesem Profil aus. Klicks sind echte Maus-Ereignisse auf
+der Seite, der Bildschirm des Rechners bleibt unberührt. Geprüft wird bei 1920×1080 und 1366×768: kein Querscrollen,
+Details im Fenster, jede Gruppe auf und zu, jeder Haken an und aus, Gruppenhaken, Version, Zeile wählen (auch mit
+gehaltener Taste über eine Aktualisierung), Knopf in den Details stabil, höchstens vier Dienste nebeneinander, Ports
+auf höchstens zwei Zeilen. Bildschirmfotos im Testordner.
+
 | Datum | Version | Ergebnis |
 |---|---|---|
 | 01.11.2026 | 0.0.1-beta | 58 Prüfungen grün; Pakete gebaut (apk 7,8 KB und 6 KB, Programm 16 KB); in der VM zwei Fehler im Backend gefunden (Fehlergedächtnis Nr. 1 und 2) |
 | 01.11.2026 | 0.0.2-beta | Scan der VM über ubus: Ports 22, 53, 80, 443 gefunden; Stopp mit Teilergebnis; Einschleusen über Bereich und Ports abgelehnt |
+| 01.11.2026 | 0.0.9-beta | Maustest bei 1920×1080 und 1366×768 ohne Befund; 129 Prüfungen grün |

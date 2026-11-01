@@ -48,6 +48,8 @@ define Package/mynetworkmonitor-scan/install
 	# What the scanner can look for, in groups; read by the LuCI page and its backend.
 	$(INSTALL_DIR) $(1)/usr/share/mynetworkmonitor
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/data/services.json $(1)/usr/share/mynetworkmonitor/
+	# The version for the LuCI page, from the same file VERSION as the package version.
+	echo "$(MNM_VERSION)" > $(1)/usr/share/mynetworkmonitor/version
 endef
 
 $(eval $(call BuildPackage,mynetworkmonitor-scan))

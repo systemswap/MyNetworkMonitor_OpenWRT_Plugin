@@ -85,3 +85,42 @@ Regeln:
 - **Nicht tun:** Optionen umbenennen ohne Übernahme; die Option `version` vergessen hochzuzählen.
 - **Im Code:** `openwrt/luci-app-mynetworkmonitor/root/etc/uci-defaults/90-luci-mynetworkmonitor`, `Makefile` (`postinst`).
 - **Abgesichert durch:** Lauf in der VM auf einer Einstellung im Format 1.
+
+## Nr. 5 – Seite: Klicks gingen verloren, weil die Tabelle jede Sekunde neu gebaut wurde
+
+- **Entdeckt:** 01.11.2026, Version 0.0.7-beta (Maustest im ferngesteuerten Firefox: Klick auf eine Zeile traf ein
+  schon ersetztes Element; der Nutzer berichtete, manches lasse sich nicht anklicken). **Behoben:** 0.0.9-beta.
+- **Was:** `update()` ersetzte jede Sekunde die ganze Tabelle und den Detailbereich. Fiel der Neuaufbau zwischen
+  Drücken und Loslassen der Maustaste, gab es keinen Klick – die Zeile oder der Knopf „Scan this device“ war in dem
+  Moment ein anderes Element.
+- **Lösung:** Zeilen werden mit einer Signatur ihres Geräts zwischengespeichert und nur neu gebaut, wenn sich etwas
+  geändert hat; die Tabelle selbst bleibt dasselbe Element, ihre Kinder werden nur getauscht, wenn sich die Reihenfolge
+  ändert. Die Details nur bei Änderung am gewählten Gerät oder am Laufzustand.
+- **Nicht tun:** Bedienelemente in einer Abfrageschleife ersetzen; `dom.content()` für Bereiche mit Klickzielen bei jeder
+  Abfrage.
+- **Im Code:** `htdocs/…/scan.js` (`renderTable`, `update`).
+- **Abgesichert durch:** `tests/ui/check_page.py` – langsamer Klick (Taste 1,5 s gehalten, über eine Aktualisierung
+  hinweg) wählt die Zeile; der Knopf in den Details bleibt über Aktualisierungen dasselbe Element.
+
+## Nr. 6 – Herstellerliste: nur die zwölfstelligen Kurznamen
+
+- **Entdeckt:** 01.11.2026, Version 0.0.8-beta (Bildschirmfoto aus dem Maustest: „HewlettPacka“, „RealtekSemic“).
+  **Behoben:** 0.0.9-beta.
+- **Warum:** Die Datei `manuf` richtet ihre Spalten mit Leerzeichen aus (`00:01:E6         ⇥HewlettPacka⇥Hewlett
+  Packard`). Der Parser nahm die Leerzeichen hinter dem Präfix als Kurznamen und den Kurznamen als vollen Namen. Die
+  Tests hatten nur Zeilen ohne Füllzeichen.
+- **Lösung:** Felder sind der Text zwischen zwei Tabulatoren, Leerzeichen außen herum werden entfernt.
+- **Nicht tun:** Testdaten für Formate selbst ausdenken, ohne eine echte Zeile der Quelle anzusehen.
+- **Im Code:** `scanner/src/textdata.c` (`mnm_vendor_parse_line`, `trim`).
+- **Abgesichert durch:** `test_vendors` mit Zeilen im echten Format (schlagen mit dem alten Parser fehl).
+
+## Nr. 7 – Seite: Gruppenhaken klappte die Gruppe mit auf und zu
+
+- **Entdeckt:** 01.11.2026, Version 0.0.5-beta (Nutzer: Auf- und Zuklappen funktioniere nicht richtig, manche Haken
+  ließen sich nicht setzen). **Behoben:** 0.0.6-beta.
+- **Warum:** Gruppenhaken und Gruppenname lagen zusammen in einem `<summary>`; ein Klick auf den Haken schaltete
+  zugleich das `<details>`. Geplante Einträge („coming“) waren gesperrt und ließen sich gar nicht anhaken.
+- **Lösung:** eigener Knopf zum Auf- und Zuklappen neben dem Gruppenhaken; geplante Einträge anhakbar, die Auswahl
+  gilt, sobald sie gebaut sind.
+- **Im Code:** `htdocs/…/scan.js` (`renderCatalog`, `updateGroupBoxes`).
+- **Abgesichert durch:** `tests/ui/check_page.py` (jede Gruppe auf und zu, jeder Haken an und aus, Gruppenhaken).
