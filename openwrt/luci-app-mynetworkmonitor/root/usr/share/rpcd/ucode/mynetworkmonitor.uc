@@ -20,8 +20,11 @@ const PROGRESS = WORK + '/progress.json';
 const RESULT = WORK + '/result.json';
 
 // Only the characters the scanner accepts; nothing a shell would interpret.
-const TARGETS_PATTERN = /^[0-9.,\/ -]{1,1024}$/;
-const PORTS_PATTERN = /^[0-9, -]{1,1024}$/;
+// The length is checked apart from the pattern: musl allows repetition counts
+// only up to 255 (RE_DUP_MAX), "{1,1024}" would make the whole file invalid.
+const TARGETS_PATTERN = /^[0-9.,\/ -]+$/;
+const PORTS_PATTERN = /^[0-9, -]+$/;
+const MAX_LENGTH = 1024;
 
 function shell_quote(text) {
 	return "'" + replace(text, "'", "'\\''") + "'";
@@ -81,7 +84,9 @@ const methods = {
 	// (so the page shows them next time) and used for this scan. Reading them
 	// from UCI instead would miss values the user saved but did not apply yet.
 	start: {
-		args: { targets: 'targets', ports: 'ports', timeout_ms: 800, parallel: 64 },
+		// All as strings: rpcd declares ucode numbers as 64-bit integers, and ubus
+		// rejects the 32-bit numbers that LuCI and the ubus command line send.
+		args: { targets: 'targets', ports: 'ports', timeout_ms: '800', parallel: '64' },
 		call: function(req) {
 			if (running_pid() != null)
 				return { error: 'A scan is already running.' };
@@ -91,6 +96,8 @@ const methods = {
 			const timeout = int_option(req.args.timeout_ms, 50, 10000, 800);
 			const parallel = int_option(req.args.parallel, 1, 256, 64);
 
+			if (length(targets) > MAX_LENGTH || length(ports) > MAX_LENGTH)
+				return { error: 'The list of ranges or ports is too long.' };
 			if (!match(targets, TARGETS_PATTERN))
 				return { error: 'Ranges may only contain addresses, ranges (a-b) and networks (a/n), separated by commas.' };
 			if (!match(ports, PORTS_PATTERN))

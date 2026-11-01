@@ -36,3 +36,28 @@ Regeln:
 - **Abgesichert durch:** <Test (der mit dem alten Code fehlschlägt) oder anderer
   Nachweis; „kein Test, weil …“>
 - **Verweise:** <ausführlicher Abschnitt, betroffene andere Projekte>
+
+## Nr. 1 – Backend für LuCI: rpcd lud das ucode-Skript nicht (Regex mit Wiederholung über 255)
+
+- **Entdeckt:** 01.11.2026, Version 0.0.1-beta (erster Test in der OpenWrt-VM: `ubus list` ohne `luci.mynetworkmonitor`).
+  **Behoben:** 0.0.2-beta.
+- **Was passiert ist:** Das Backend fehlte am ubus, ohne Meldung im Systemprotokoll. `ucode <datei>` zeigte „Invalid
+  contents of {}“ an `/^[0-9.,\/ -]{1,1024}$/`.
+- **Warum:** ucode übersetzt Regex mit der Bibliothek von musl; die erlaubt Wiederholungen nur bis 255 (`RE_DUP_MAX`).
+  Ein Syntaxfehler macht die ganze Datei ungültig, rpcd überspringt sie still.
+- **Lösung:** Muster ohne Mengenangabe (`+`), Länge getrennt mit `length()` geprüft.
+- **Nicht tun:** Wiederholungen über 255 in Regex für ucode; ein neues Backend ohne `ucode <datei>` einspielen.
+- **Im Code:** `openwrt/luci-app-mynetworkmonitor/root/usr/share/rpcd/ucode/mynetworkmonitor.uc` (`TARGETS_PATTERN`,
+  `PORTS_PATTERN`, `MAX_LENGTH`).
+- **Abgesichert durch:** Test in der VM (`docs/PRUEFUNGEN.md`); ucode prüft die Syntax beim Laden.
+
+## Nr. 2 – Backend für LuCI: Start mit Zahlen wurde von ubus abgelehnt
+
+- **Entdeckt:** 01.11.2026, Version 0.0.1-beta (Test in der VM: `ubus call … start` mit `timeout_ms: 300` → „Invalid
+  argument“). **Behoben:** 0.0.2-beta.
+- **Warum:** rpcd leitet die Typen der Argumente aus den Beispielwerten in `args` ab; ucode-Zahlen werden zu 64-Bit-
+  Zahlen, LuCI und die ubus-Befehlszeile schicken aber 32-Bit-Zahlen – ubus lehnt den Aufruf ab.
+- **Lösung:** `timeout_ms` und `parallel` als Zeichenketten; das Backend wandelt und prüft sie selbst (`int_option`).
+- **Nicht tun:** Zahlen als Beispielwerte in `args` eines ucode-Backends.
+- **Im Code:** `mynetworkmonitor.uc` (`start`), `htdocs/…/scan.js` (`handleStart`).
+- **Abgesichert durch:** Test in der VM (Start, Stand, Ergebnis, Stopp, Versuche mit `;` und `$(…)` abgelehnt).

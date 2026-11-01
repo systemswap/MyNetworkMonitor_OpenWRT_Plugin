@@ -41,3 +41,31 @@ eigener `ArtifactsPath`, Läufe im Wechsel.
 | Datum | Version | Kennzahlen |
 |---|---|---|
 | <…> | <…> | <…> |
+
+## Stand dieses Projekts
+
+### Tests auf dem PC
+
+    cd scanner && make BUILD=<testordner>/host test
+
+Eigene kleine Testsammlung (`scanner/tests/tests.c`), gebaut mit AddressSanitizer und UBSan: Ziel- und Portlisten,
+JSON-Ausgabe mit ungültigem UTF-8, TCP-Scan gegen lauschende und geschlossene Ports auf 127.0.0.1.
+
+### Pakete bauen
+
+SDK von OpenWrt im Testordner, Paketquelle `src-link mynetworkmonitor <testordner>/feed` – `feed` ist ein Verweis auf
+`openwrt/` dieses Repositorys ohne Leerzeichen im Pfad (das SDK trennt `feeds.conf` am Leerzeichen):
+
+    ./scripts/feeds update mynetworkmonitor && ./scripts/feeds install -a -p mynetworkmonitor
+    make package/mynetworkmonitor-scan/compile package/luci-app-mynetworkmonitor/compile
+
+### Test in der OpenWrt-VM
+
+QEMU mit dem Abbild `x86-64-generic-ext4-combined-efi` im Testordner, Netz `-netdev user,restrict=on` (die VM erreicht
+weder das Heimnetz noch das Internet), nur `127.0.0.1:8080` → LuCI und `127.0.0.1:2222` → SSH weitergeleitet. Pakete
+per `ssh … "cat > /tmp/x.apk"` und `apk add --allow-untrusted`.
+
+| Datum | Version | Ergebnis |
+|---|---|---|
+| 01.11.2026 | 0.0.1-beta | 58 Prüfungen grün; Pakete gebaut (apk 7,8 KB und 6 KB, Programm 16 KB); in der VM zwei Fehler im Backend gefunden (Fehlergedächtnis Nr. 1 und 2) |
+| 01.11.2026 | 0.0.2-beta | Scan der VM über ubus: Ports 22, 53, 80, 443 gefunden; Stopp mit Teilergebnis; Einschleusen über Bereich und Ports abgelehnt |

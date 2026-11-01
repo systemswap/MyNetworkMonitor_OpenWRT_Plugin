@@ -90,7 +90,7 @@ return view.extend({
 		await map.parse();
 		const get = (name, fallback) => uci.get('mynetworkmonitor', 'scan', name) || fallback;
 		const answer = await callStart(get('targets', ''), get('ports', ''),
-			+get('timeout_ms', 800), +get('parallel', 64));
+			String(get('timeout_ms', '800')), String(get('parallel', '64')));
 		if (answer.error)
 			ui.addNotification(null, E('p', {}, answer.error), 'error');
 		return this.refresh();
