@@ -150,3 +150,20 @@ Regeln:
 - **Nicht tun:** Teil-Scans wie vollständige behandeln, wenn daraus Aussagen über nicht gefragte Geräte folgen.
 - **Im Code:** `root/usr/share/rpcd/ucode/mynetworkmonitor.uc` (`single_device`, `merge_finished_scan`, `status`).
 - **Abgesichert durch:** Ablauf in der VM (Einzelgerät-Scan nach einem vollständigen Scan).
+
+## Nr. 10 – Seite: „[object HTMLElement]“ statt der erkannten Dienste in den Details
+
+- **Entdeckt:** 01.11.2026, Version 0.0.13-beta (Nutzer: unter SERVICES & PORTS steht „object html.element“; während
+  des Scans stimmte es, danach nicht mehr). **Behoben:** 0.0.15-beta, im zweiten Anlauf.
+- **Warum:** Die Bauhilfe `E()` von LuCI löst eine Ebene von Listen auf; die Zeile eines Ports enthielt eine Liste mit
+  einer weiteren Liste darin (je erkannter Dienst Name und Version). Die innere wurde als Text ausgegeben. Während des
+  Scans waren noch keine Dienste erkannt, dann stand dort „open, not recognised“ ohne Verschachtelung – deshalb trat
+  der Fehler erst nach dem Scan auf. Der erste Anlauf (`flatMap`) ließ die Liste noch eine Ebene zu tief stehen.
+- **Lösung:** Die Teile jeder Zeile werden in eine flache Liste ausgebreitet (`...what`).
+- **Zweite Ursache für das Ausbleiben:** Das SDK baute das Paket der Seite bei gleicher Version nicht neu, obwohl sich
+  `scan.js` geändert hatte – in der VM lag noch die alte Datei. Seitdem vor dem Einspielen immer
+  `make package/<paket>/clean` vor `compile`, und nachsehen, ob die Änderung im Gerät angekommen ist.
+- **Nicht tun:** verschachtelte Listen an `E()` geben; einem Paket glauben, ohne die eingespielte Datei zu prüfen.
+- **Im Code:** `htdocs/…/scan.js` (`renderDetails`).
+- **Abgesichert durch:** `tests/ui/check_page.py` – klickt jede Zeile an und prüft, dass nirgends „[object“ steht
+  (schlug mit 0.0.13- und 0.0.14-beta an).

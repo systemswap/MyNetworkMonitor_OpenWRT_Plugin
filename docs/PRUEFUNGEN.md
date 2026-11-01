@@ -57,7 +57,11 @@ SDK von OpenWrt im Testordner, Paketquelle `src-link mynetworkmonitor <testordne
 `openwrt/` dieses Repositorys ohne Leerzeichen im Pfad (das SDK trennt `feeds.conf` am Leerzeichen):
 
     ./scripts/feeds update mynetworkmonitor && ./scripts/feeds install -a -p mynetworkmonitor
+    make package/mynetworkmonitor-scan/clean package/luci-app-mynetworkmonitor/clean
     make package/mynetworkmonitor-scan/compile package/luci-app-mynetworkmonitor/compile
+
+Immer erst `clean`: Ohne baut das SDK ein Paket nicht neu, wenn sich nur Dateien wie `scan.js` geändert haben
+(Fehlergedächtnis Nr. 10). Nach dem Einspielen nachsehen, ob die Änderung im Gerät angekommen ist.
 
 ### Test in der OpenWrt-VM
 

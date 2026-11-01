@@ -307,7 +307,9 @@ return view.extend({
 	// their element: replacing a row between pressing and releasing the mouse
 	// button would swallow the click (docs/FEHLERGEDAECHTNIS.md, No. 5).
 	renderTable(st) {
-		const online = d => st.last_scan && d.last_seen >= st.last_scan;
+		// Online: seen in the last full scan or later. Without a full scan yet
+		// (e.g. right after "Clear table"), every device seen counts.
+		const online = d => d.last_seen >= (st.last_scan || 0);
 		const devices = (st.devices || []).slice().sort(ipOrder);
 		const cache = this.rowCache || (this.rowCache = new Map());
 		const used = new Map();
@@ -386,9 +388,13 @@ return view.extend({
 		const names = this.serviceNames();
 		const ports = (d.tcp || []).map(p => {
 			const found = (d.services || []).filter(s => s.port == p);
-			return E('div', {}, [ E('span', { 'class': 'mnm-mono' }, String(p)), ' ',
-				found.length ? found.map(s => [ E('strong', {}, s.name || names[s.id] || s.id), s.detail ? E('span', { 'class': 'mnm-sub' }, ' · ' + s.detail) : '' ])
-					: E('span', { 'class': 'mnm-sub' }, d.services ? _('open, not recognised') : (SERVICES[p] || '')) ]);
+			// The parts of each line are spread into one flat list: E() resolves
+			// one level of arrays only, a nested one would end up as the text
+			// "[object HTMLElement]" (docs/FEHLERGEDAECHTNIS.md, No. 10).
+			const what = found.length
+				? found.flatMap(s => [ E('strong', {}, s.name || names[s.id] || s.id), s.detail ? E('span', { 'class': 'mnm-sub' }, ' · ' + s.detail) : '' ])
+				: [ E('span', { 'class': 'mnm-sub' }, d.services ? _('open, not recognised') : (SERVICES[p] || '')) ];
+			return E('div', {}, [ E('span', { 'class': 'mnm-mono' }, String(p)), ' ', ...what ]);
 		});
 
 		return E('div', { 'class': 'cbi-section' }, [

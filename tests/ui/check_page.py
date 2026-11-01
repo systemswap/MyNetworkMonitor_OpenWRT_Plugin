@@ -109,6 +109,14 @@ for width, height in [(1920, 1080), (1366, 768)]:
                       "slow click (1.5 s held) selects the row")
             button = ff.find("#mnm-details button")
             check(ff.js("return !!document.querySelector('#mnm-details button')"), "details have the scan button")
+            # No object turned into text anywhere on the page ("[object HTMLElement]").
+            for i in range(len(rows)):
+                ff.click(ff.find_all("tr.mnm-row td:nth-child(2)")[i])
+                ff.wait("return true", 0.3)
+                if "[object" in ff.js("return document.getElementById('mnm-details').textContent"):
+                    break
+            junk = ff.js("return document.body.textContent.includes('[object')")
+            check(not junk, "no '[object ...]' text in table or details")
             stable = ff.js("const b=document.querySelector('#mnm-details button');"
                            "return new Promise(r=>setTimeout(()=>r(b.isConnected), 2500))")
             check(stable, "details button stays the same element over refreshes")
