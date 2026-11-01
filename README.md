@@ -13,7 +13,8 @@ Für OpenWrt 25.12 und neuer, auf allen Prozessorarten, für die OpenWrt Pakete 
 
 ## Installation
 
-Die Pakete für alle Prozessorarten stehen unter *Releases* dieses Repositorys. Zwei Pakete,
+Die Pakete stehen unter *Releases* dieses Repositorys – zunächst für `aarch64_cortex-a53` (z. B. Linksys MX4200),
+weitere Prozessorarten folgen nach den ersten Tests. Zwei Pakete,
 `mynetworkmonitor-scan` (passend zur Prozessorart des Routers, `apk --print-arch`) und `luci-app-mynetworkmonitor`:
 in LuCI unter *System → Software → Paket hochladen…* nacheinander hochladen, oder per SSH mit
 `apk add --allow-untrusted <dateien>`. Schritt für Schritt: `packaging/ANLEITUNG.txt`. Benötigt werden
