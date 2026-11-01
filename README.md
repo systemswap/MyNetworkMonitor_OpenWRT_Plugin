@@ -9,7 +9,14 @@ Geräte, die sich nur auf Rundrufe melden.
 
 Für OpenWrt 25.12 und neuer, auf allen Prozessorarten, für die OpenWrt Pakete baut.
 
-**Stand:** im Aufbau, noch nicht benutzbar.
+**Stand:** Beta – benutzbar, erste Tests auf echten Routern stehen aus.
+
+## Installation
+
+Zwei Pakete, `mynetworkmonitor-scan` (passend zur Prozessorart des Routers) und `luci-app-mynetworkmonitor`:
+in LuCI unter *System → Software → Paket hochladen…* nacheinander hochladen, oder per SSH mit
+`apk add --allow-untrusted <dateien>`. Schritt für Schritt: `packaging/ANLEITUNG.txt`. Benötigt werden
+`luci-base`, `rpcd-mod-ucode` und `libmbedtls`, die auf OpenWrt mit Weboberfläche schon installiert sind.
 
 ## Aufbau
 

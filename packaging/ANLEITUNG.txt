@@ -1,0 +1,34 @@
+MyNetworkMonitor für OpenWrt – Installation
+===========================================
+
+Passend für: Router mit OpenWrt 25.12.x und der Architektur dieses Ordners
+(aarch64_cortex-a53 z. B. für Linksys MX4200 und alle Geräte mit qualcommax/ipq807x).
+
+Vorher prüfen (Router-Oberfläche, Status -> Übersicht):
+  - Firmware-Version: OpenWrt 25.12.x (ältere Versionen nutzen ein anderes Paketformat)
+  - Architektur bzw. Modell wie oben
+
+Installieren (im Browser):
+  1. Router-Oberfläche öffnen und anmelden.
+  2. System -> Software -> "Paket hochladen..."
+  3. Zuerst  mynetworkmonitor-scan-....apk  hochladen und installieren.
+     Die Frage nach dem nicht signierten Paket bestätigen.
+  4. Dann    luci-app-mynetworkmonitor-....apk  genauso.
+  5. Seite neu laden: Netzwerk -> MyNetworkMonitor -> "Start scan".
+
+Installieren (per SSH, alternativ):
+  Dateien nach /tmp kopieren, dann
+    apk add --allow-untrusted /tmp/mynetworkmonitor-scan-*.apk /tmp/luci-app-mynetworkmonitor-*.apk
+
+Benötigt werden luci-base, rpcd-mod-ucode und libmbedtls. Auf Routern mit der
+normalen OpenWrt-Oberfläche ist alles schon vorhanden; sonst lädt der Router es
+beim Installieren selbst nach (dafür braucht er Internet).
+
+Aktualisieren: genauso mit den neuen Dateien; die Einstellungen bleiben.
+
+Entfernen:
+    apk del luci-app-mynetworkmonitor mynetworkmonitor-scan
+
+Hinweis: Nur Netze scannen, für die man die Erlaubnis hat. Der Scanner fragt
+nur private Adressbereiche ab (Heimnetz). Portscans und Abfragen können
+empfindliche Geräte wie Steuerungen stören.
