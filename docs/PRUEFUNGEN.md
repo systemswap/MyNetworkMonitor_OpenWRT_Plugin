@@ -65,6 +65,11 @@ QEMU mit dem Abbild `x86-64-generic-ext4-combined-efi` im Testordner, Netz `-net
 weder das Heimnetz noch das Internet), nur `127.0.0.1:8080` → LuCI und `127.0.0.1:2222` → SSH weitergeleitet. Pakete
 per `ssh … "cat > /tmp/x.apk"` und `apk add --allow-untrusted`.
 
+**Test im Heimnetz:** dieselbe VM über libvirt (`mnm-openwrt-test`, Abbild im Speicherbereich `default`) an der
+Netzbrücke des Rechners. OpenWrt ist dafür reines Endgerät: `lan` holt die Adresse per DHCP, `dhcp.lan` mit
+`ignore=1`, `dhcpv4`, `dhcpv6` und `ra` auf `disabled` – sonst verteilte es Adressen und IPv6-Ankündigungen im Heimnetz.
+Root hat ein zufälliges Passwort (LuCI), SSH mit einem eigenen Schlüssel; beides nur im lokalen Testordner.
+
 | Datum | Version | Ergebnis |
 |---|---|---|
 | 01.11.2026 | 0.0.1-beta | 58 Prüfungen grün; Pakete gebaut (apk 7,8 KB und 6 KB, Programm 16 KB); in der VM zwei Fehler im Backend gefunden (Fehlergedächtnis Nr. 1 und 2) |
