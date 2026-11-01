@@ -142,3 +142,23 @@ Zeitlich geordnet, neue ans Ende.
 - **Verworfen:** `nslookup` je Gerät aufrufen – ein Prozess je Adresse und Ausgabe, die man zerlegen müsste; das
   Scanprogramm schickt alle Fragen über einen UDP-Socket (höchstens 1000 je Sekunde) und ordnet die Antworten über
   ihre Kennung zu. Geräte, die kein Namensserver kennt, bekommen Namen später über NetBIOS und mDNS.
+
+### 01.11.2026 – Sonden nur an Geräte der Tabelle
+
+- **Entschieden:** Gesucht wird in Stufen: erst die Geräte, dann deren TCP-Ports, dann die Dienste. TCP-Sonden gehen nur
+  an offene Ports gefundener Geräte, und nur an die Ports ihres Dienstes. UDP-Sonden (DNS über UDP, BACnet,
+  SQL-Server-Browser) gehen nur an Geräte der Tabelle, nie an einen ganzen Bereich. Rundrufe (WS-Discovery für ONVIF,
+  SSDP, mDNS, NetBIOS) werden einmal je Netz gesendet; wer antwortet, kommt in die Tabelle oder wird dort ergänzt,
+  und Abfragen per Unicast danach (z. B. die Gerätebeschreibung) gehen nur an Geräte der Tabelle.
+- **Warum:** weniger Last im Netz und kürzere Scans; empfindliche Geräte bekommen keine Pakete für Dienste, die sie
+  nicht anbieten.
+
+### 01.11.2026 – Filter über der Tabelle
+
+- **Entschieden:** zwei Suchfelder, die beide passen müssen (Name, Adressen, MAC auch ohne Trennzeichen, Hersteller,
+  Netz, vermutetes System, erkannte Dienste mit ihren Angaben), ein Portfeld (`445`, `80,443`, `5000-5100`: Geräte mit
+  mindestens einem dieser offenen Ports) und „only reachable“. Die Filter wirken nur auf die Anzeige, laufen im
+  Browser und werden nicht gespeichert. Ein unfertiges Portfeld (`80-`) wird rot umrandet und filtert nichts.
+- **Nicht übernommen** aus dem Desktop-Programm: Auswahl nach Dienst und Bereich als Klappliste, IPv4/IPv6-Schalter,
+  Doppelte – auf dem Router reichen Suchfeld (findet auch Dienstnamen) und Gruppierung nach Netz.
+

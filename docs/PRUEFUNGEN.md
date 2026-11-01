@@ -91,7 +91,8 @@ Profil im Testordner; Telemetrie, Berichte und Updates sind in diesem Profil aus
 der Seite, der Bildschirm des Rechners bleibt unberührt. Geprüft wird bei 1920×1080 und 1366×768: kein Querscrollen,
 Details im Fenster, jede Gruppe auf und zu, jeder Haken an und aus, Gruppenhaken, Version, Zeile wählen (auch mit
 gehaltener Taste über eine Aktualisierung), Knopf in den Details stabil, höchstens vier Dienste nebeneinander, Ports
-auf höchstens zwei Zeilen. Bildschirmfotos im Testordner.
+auf höchstens zwei Zeilen, Filter (Suchfeld, zweites Feld, Portfeld samt unfertiger Eingabe, „only reachable“,
+„Reset filters“, Filter bleibt über Aktualisierungen). Bildschirmfotos im Testordner.
 
 Einmal im Ruhezustand und einmal **während laufender Scans**: dazu im Hintergrund fortlaufend Einzelgerät-Scans eines
 Geräts über `ubus call luci.mynetworkmonitor start` mit `target` starten (die verändern die Einstellungen des Nutzers
@@ -105,3 +106,4 @@ nicht). Vorher prüfen, dass die Geräteliste nicht leer ist; sonst ein Gerät m
 | 01.11.2026 | 0.0.13-beta | Stufe 3a: 16 Pakete identisch mit dem Desktop-Programm; 156 Prüfungen grün; im Heimnetz erkannt: SSH mit Version, HTTP mit Server, DNS, RDP mit Sicherheitsstufe, VNC mit Protokoll; Maustest ohne Befund |
 | 01.11.2026 | 0.0.18-beta | Maustest im Ruhezustand und während laufender Scans ohne Befund (beide Auflösungen) |
 | 01.11.2026 | 0.0.19-beta | 166 Prüfungen grün; Gerätenamen im Heimnetz (VM als Endgerät): alle Namen, die das Gateway kennt, gefunden – der Namensserver aus DHCP kannte keinen; Spalte „Device“ zeigt den Namen; Maustest ohne Befund |
+| 01.11.2026 | 0.0.20-beta | Filter über der Tabelle: Maustest im Ruhezustand und während laufender Scans ohne Befund (beide Auflösungen); dabei Nr. 13 gefunden und behoben |

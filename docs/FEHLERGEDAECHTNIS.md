@@ -209,3 +209,16 @@ Regeln:
   NXDOMAIN, Zeigerschleife, jede abgeschnittene Länge, Standard-Gateway aus der Routentabelle); Test in der VM im
   Heimnetz: alle Namen, die das Gateway kennt, kamen an.
 
+## Nr. 13 – Seite: lange Gerätenamen machten die Tabelle bei 1366 Pixeln zu breit
+
+- **Entdeckt:** 01.11.2026, Version 0.0.19-beta (Maustest bei 1366×768 nach dem ersten Scan mit Namen: Tabelle 11 Pixel
+  breiter als ihr Bereich). **Behoben:** 0.0.20-beta.
+- **Warum:** Mit der Rückwärtsauflösung kamen Namen wie „Gerät-mit-MAC-im-Namen“ in die Spalte „Device“, die keine
+  Grenze hatte; ein Name ohne Trennstelle bestimmte die Spaltenbreite.
+- **Lösung:** Spalte „Device“ höchstens 13em breit, lange Namen brechen an jeder Stelle um (`overflow-wrap:anywhere`);
+  der volle Name steht im Tooltip und in den Details.
+- **Nicht tun:** Spalten mit Text aus dem Netz (Namen, Hersteller, Dienstangaben) ohne Höchstbreite lassen – die
+  Tests mit dem eigenen Testbestand zeigen nicht jeden Namen, der vorkommt.
+- **Im Code:** `htdocs/…/scan.js` (`STYLE`, `.mnm-name`).
+- **Abgesichert durch:** `tests/ui/check_page.py` („device table fits its area“ bei 1366×768).
+

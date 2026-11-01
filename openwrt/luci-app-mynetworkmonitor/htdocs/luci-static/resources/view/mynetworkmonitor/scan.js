@@ -48,6 +48,8 @@ const STYLE = `
 .mnm-table td { vertical-align:top; }
 .mnm-table td.mnm-nowrap { white-space:nowrap; }
 .mnm-table td.mnm-vendor { max-width:12em; }
+/* Host names can be long and without a break point (e.g. a name with the MAC address in it). */
+.mnm-table td.mnm-name { max-width:13em; overflow-wrap:anywhere; }
 .mnm-table tr.mnm-row { cursor:pointer; }
 .mnm-table tr.mnm-net-head td { background:rgba(128,128,128,.12); font-weight:bold; padding-top:.6em; }
 .mnm-table tr.mnm-row.selected td { background:rgba(11,124,139,.15); }
@@ -64,6 +66,10 @@ const STYLE = `
 .mnm-details dt { opacity:.7; }
 .mnm-details dd { margin:0; }
 .mnm-toolbar { display:flex; flex-wrap:wrap; gap:.5em; align-items:center; margin:.5em 0; }
+.mnm-filters input[type=text] { width:14em; }
+.mnm-filters input.mnm-short { width:9em; }
+.mnm-filters input.mnm-invalid { border-color:#c33; }
+.mnm-filters label { white-space:nowrap; cursor:pointer; }
 .mnm-networks label { display:inline-block; margin-right:1.2em; }
 /* The groups of "What to look for": three side by side. */
 .mnm-groups { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.6em; }
@@ -134,6 +140,32 @@ function shortV6(a) {
 		return a;
 	const parts = a.split(':');
 	return parts.slice(0, 2).join(':') + ':…:' + parts[parts.length - 1];
+}
+
+// A port filter such as "445", "80,443" or "5000-5100": a list of [from, to],
+// empty for no filter, null if the text is not such a list.
+function parsePortFilter(text) {
+	const ranges = [];
+	for (const part of text.split(',').map(p => p.trim()).filter(p => p.length)) {
+		const m = part.match(/^(\d{1,5})(?:\s*-\s*(\d{1,5}))?$/);
+		if (!m)
+			return null;
+		const from = +m[1], to = m[2] ? +m[2] : from;
+		if (from < 1 || to > 65535 || from > to)
+			return null;
+		ranges.push([ from, to ]);
+	}
+	return ranges;
+}
+
+// Everything a search term is looked for in, in lower case: names, addresses
+// (the MAC also without separators), vendor, network, the guessed system and
+// the recognised services with what they told about themselves.
+function searchText(d, names) {
+	const mac = d.mac || '';
+	return [ displayName(d), d.hostname, d.ipv4, ...(d.ipv6 || []), mac, mac.replace(/[:-]/g, ''), d.vendor,
+		d.network, d.os_guess, ...(d.services || []).flatMap(s => [ s.name || names[s.id] || s.id, s.detail ]) ]
+		.filter(x => x).join('\n').toLowerCase();
 }
 
 // Compares IPv4 addresses numerically, so that .10 comes after .9.
@@ -314,7 +346,18 @@ return view.extend({
 		// Online: seen in the last full scan or later. Without a full scan yet
 		// (e.g. right after "Clear table"), every device seen counts.
 		const online = d => d.last_seen >= (st.last_scan || 0);
-		const devices = (st.devices || []).slice().sort(ipOrder);
+		const all = (st.devices || []).slice().sort(ipOrder);
+		const f = this.filterValues();
+		const names = this.serviceNames();
+		const devices = all.filter(d => {
+			if (f.onlyOnline && !online(d))
+				return false;
+			if (f.ports && f.ports.length && !(d.tcp || []).some(p => f.ports.some(([ a, b ]) => p >= a && p <= b)))
+				return false;
+			const text = (f.terms.length ? searchText(d, names) : '');
+			return f.terms.every(t => text.includes(t));
+		});
+		const filtered = devices.length != all.length;
 		const cache = this.rowCache || (this.rowCache = new Map());
 		const used = new Map();
 		const cached = (key, signature, build) => {
@@ -347,7 +390,7 @@ return view.extend({
 			}, [
 				E('td', { 'class': 'td mnm-nowrap' }, E('span', { 'class': 'mnm-dot' + (online(d) ? ' online' : ''),
 					'title': online(d) ? _('seen in the last scan') : _('not seen in the last scan') })),
-				E('td', { 'class': 'td' }, [ E('strong', {}, displayName(d)), E('br'), E('span', { 'class': 'mnm-sub' }, d.network || '') ]),
+				E('td', { 'class': 'td mnm-name', 'title': d.hostname || '' }, [ E('strong', {}, displayName(d)), E('br'), E('span', { 'class': 'mnm-sub' }, d.network || '') ]),
 				E('td', { 'class': 'td mnm-mono mnm-nowrap' }, d.ipv4 || '-'),
 				E('td', { 'class': 'td mnm-mono mnm-nowrap', 'title': v6.join('\n') }, v6.length ? [ shortV6(v6[0]), v6.length > 1 ? E('span', { 'class': 'mnm-sub' }, ' +' + (v6.length - 1)) : '' ] : '-'),
 				E('td', { 'class': 'td mnm-vendor' }, d.vendor || '-'),
@@ -366,13 +409,17 @@ return view.extend({
 			const members = devices.filter(d => (d.network || null) == g.name);
 			if (!members.length)
 				continue;
-			rows.push(cached('net:' + g.label, String(members.length), () => E('tr', { 'class': 'tr mnm-net-head' },
-				E('td', { 'class': 'td', 'colspan': 8 }, [ g.label, ' ', E('span', { 'class': 'mnm-sub' }, _('%d devices').format(members.length)) ]))));
+			const total = all.filter(d => (d.network || null) == g.name).length;
+			const count = (members.length == total) ? _('%d devices').format(total) : _('%d of %d devices').format(members.length, total);
+			rows.push(cached('net:' + g.label, count, () => E('tr', { 'class': 'tr mnm-net-head' },
+				E('td', { 'class': 'td', 'colspan': 8 }, [ g.label, ' ', E('span', { 'class': 'mnm-sub' }, count) ]))));
 			members.forEach(d => rows.push(row(d)));
 		}
-		if (!rows.length)
-			rows.push(cached('empty', '', () => E('tr', { 'class': 'tr' },
-				E('td', { 'class': 'td', 'colspan': 8 }, E('em', {}, _('No devices yet - start a scan.'))))));
+		if (!rows.length) {
+			const text = filtered ? _('No device matches the filters.') : _('No devices yet - start a scan.');
+			rows.push(cached('empty', text, () => E('tr', { 'class': 'tr mnm-empty' },
+				E('td', { 'class': 'td', 'colspan': 8 }, E('em', {}, text)))));
+		}
 		this.rowCache = used;
 
 		const table = this.tableEl || (this.tableEl = E('table', { 'class': 'table' }));
@@ -381,6 +428,44 @@ return view.extend({
 		if (wanted.length != current.length || wanted.some((el, i) => el !== current[i]))
 			table.replaceChildren(...wanted);
 		return table;
+	},
+
+	// ------------------------------------------------------------- filters
+
+	// The filters above the table, as in the desktop program: two search
+	// fields that must both match, open ports and "only reachable". They only
+	// change what is shown and are not saved.
+	renderFilters() {
+		const changed = () => this.update();
+		const field = (id, cls, placeholder, title) => E('input', { 'type': 'text', 'id': id, 'class': 'cbi-input-text' + (cls ? ' ' + cls : ''),
+			'placeholder': placeholder, 'title': title, 'autocomplete': 'off', 'spellcheck': 'false', 'input': changed });
+		return E('div', { 'class': 'mnm-toolbar mnm-filters' }, [
+			field('mnm-search', '', _('Search across all columns'), _('Name, address, MAC, vendor, network or service')),
+			field('mnm-search2', 'mnm-short', _('and ...'), _('A second term that must match as well')),
+			field('mnm-port', 'mnm-short', _('Port'), '445 · 80,443 · 5000-5100'),
+			E('label', {}, [ E('input', { 'type': 'checkbox', 'id': 'mnm-online', 'change': changed }), ' ', _('only reachable') ]),
+			E('button', { 'id': 'mnm-reset-filters', 'class': 'cbi-button', 'click': () => this.resetFilters() }, _('Reset filters'))
+		]);
+	},
+
+	filterValues() {
+		const val = id => (document.getElementById(id)?.value || '').trim().toLowerCase();
+		const portField = document.getElementById('mnm-port');
+		const ports = parsePortFilter(val('mnm-port'));
+		// An unfinished port list ("80,", "5000-") filters nothing until it is valid.
+		portField?.classList.toggle('mnm-invalid', ports == null);
+		return {
+			terms: [ val('mnm-search'), val('mnm-search2') ].filter(t => t.length),
+			ports: ports,
+			onlyOnline: !!document.getElementById('mnm-online')?.checked
+		};
+	},
+
+	resetFilters() {
+		for (const id of [ 'mnm-search', 'mnm-search2', 'mnm-port' ])
+			document.getElementById(id).value = '';
+		document.getElementById('mnm-online').checked = false;
+		this.update();
 	},
 
 	// ------------------------------------------------------------- details
@@ -536,6 +621,7 @@ return view.extend({
 				E('button', { 'id': 'mnm-clear', 'class': 'cbi-button cbi-button-remove', 'click': ui.createHandlerFn(this, 'handleClear') }, _('Clear table')),
 				E('span', { 'id': 'mnm-progress' })
 			]),
+			this.renderFilters(),
 			E('div', { 'class': 'mnm-main' }, [
 				E('div', { 'id': 'mnm-table', 'class': 'mnm-table' }),
 				E('div', { 'id': 'mnm-details', 'class': 'mnm-details' })

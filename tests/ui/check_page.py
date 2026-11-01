@@ -133,6 +133,48 @@ for width, height in [(1920, 1080), (1366, 768)]:
             ff.shot("scrolled-%dx%d.png" % (width, height))
             ff.js("window.scrollTo(0, 0)")
 
+        # Filters above the table, typed and clicked as a user would
+        count = "return document.querySelectorAll('tr.mnm-row').length"
+        n_all = ff.js(count)
+        if n_all:
+            ip = ff.js("return document.querySelector('tr.mnm-row td:nth-child(3)').textContent.trim()")
+            ff.click(ff.find("#mnm-search"))
+            ff.type(ff.find("#mnm-search"), ip)
+            ff.wait("return true", 0.3)
+            shown = ff.js("return [...document.querySelectorAll('tr.mnm-row')].map(r=>r.textContent.toLowerCase())")
+            check(len(shown) >= 1 and all(ip in t for t in shown), "search field shows only matching devices (%d of %d)" % (len(shown), n_all))
+            ff.wait("return true", 2.5)
+            check(ff.js(count) == len(shown) and ff.js("return document.getElementById('mnm-search').value") == ip,
+                  "filter stays over refreshes")
+            ff.type(ff.find("#mnm-search2"), "zz-no-such-device-zz")
+            ff.wait("return true", 0.3)
+            check(ff.js(count) == 0 and "No device matches" in ff.js("return document.getElementById('mnm-table').textContent"),
+                  "second field narrows down, with a note when nothing matches")
+            ff.click(ff.find("#mnm-reset-filters"))
+            ff.wait("return true", 0.3)
+            check(ff.js(count) == n_all and ff.js("return document.getElementById('mnm-search').value") == "",
+                  "reset filters shows all devices again")
+            port = ff.js("for (const td of document.querySelectorAll('tr.mnm-row td:nth-child(7)')) {"
+                         "const m = td.textContent.match(/\\d+/); if (m) return m[0]; } return null")
+            if port:
+                ff.type(ff.find("#mnm-port"), port)
+                ff.wait("return true", 0.3)
+                cells = ff.js("return [...document.querySelectorAll('tr.mnm-row td:nth-child(7)')].map(td=>td.textContent)")
+                check(len(cells) >= 1 and all(port in [x.strip() for x in c.replace("\n", ",").split(",")] for c in cells),
+                      "port field shows only devices with that open port (%d, port %s)" % (len(cells), port))
+                ff.type(ff.find("#mnm-port"), "80-")
+                ff.wait("return true", 0.3)
+                check(ff.js(count) == n_all and ff.js("return document.getElementById('mnm-port').classList.contains('mnm-invalid')"),
+                      "unfinished port list is marked and filters nothing")
+            ff.click(ff.find("#mnm-online"))
+            ff.wait("return true", 0.3)
+            offline = ff.js("return document.querySelectorAll('tr.mnm-row .mnm-dot:not(.online)').length")
+            check(offline == 0, "only reachable hides devices not seen in the last scan")
+            ff.click(ff.find("#mnm-reset-filters"))
+            ff.wait("return true", 0.3)
+            check(ff.js(count) == n_all and not ff.js("return document.getElementById('mnm-online').checked"),
+                  "reset filters clears all fields")
+
         # At most four services side by side, ports in at most two lines
         widest = ff.js("let m=0; document.querySelectorAll('.mnm-chips').forEach(c=>{const t=[...c.children].map(x=>Math.round(x.getBoundingClientRect().top));"
                        "const n=t.filter(v=>v==t[0]).length; if(n>m) m=n}); return m")
