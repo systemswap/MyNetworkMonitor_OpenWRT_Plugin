@@ -337,7 +337,9 @@ return view.extend({
 			const signature = JSON.stringify([ d, online(d), key == this.selected, ago(d.last_seen) ]);
 			return cached('row:' + key, signature, () => E('tr', {
 				'class': 'tr mnm-row' + (key == this.selected ? ' selected' : ''),
-				'click': () => { this.selected = key; this.update(); }
+				// Chosen on pressing the button, not on releasing it: a row that is
+				// rebuilt in between (scan running) would otherwise swallow the click.
+				'mousedown': ev => { if (ev.button == 0) { this.selected = key; this.update(); } }
 			}, [
 				E('td', { 'class': 'td mnm-nowrap' }, E('span', { 'class': 'mnm-dot' + (online(d) ? ' online' : ''),
 					'title': online(d) ? _('seen in the last scan') : _('not seen in the last scan') })),
@@ -400,7 +402,7 @@ return view.extend({
 		return E('div', { 'class': 'cbi-section' }, [
 			E('h3', { 'style': 'margin-top:0' }, displayName(d)),
 			E('div', { 'class': 'mnm-sub' }, [ d.vendor || _('unknown vendor'), d.mac ? ' · ' + d.mac : '' ]),
-			E('div', { 'class': 'mnm-toolbar' }, E('button', { 'class': 'cbi-button cbi-button-action', 'disabled': st.running ? '' : null,
+			E('div', { 'class': 'mnm-toolbar' }, E('button', { 'class': 'cbi-button cbi-button-action',
 				'click': ui.createHandlerFn(this, 'handleScanDevice', d.ipv4) }, _('Scan this device'))),
 
 			E('h4', {}, _('IDENTITY')),
@@ -463,13 +465,17 @@ return view.extend({
 		const table = this.renderTable(st);
 		if (table.parentNode !== box)
 			dom.content(box, table);
-		// The details only when something in them changed: they hold a button.
+		// The details only when the device in them changed: they hold a button.
+		// Whether a scan runs only switches that button.
 		const selected = (st.devices || []).find(x => this.keyOf(x) == this.selected);
-		const signature = JSON.stringify([ selected, st.running ]);
+		const signature = JSON.stringify(selected);
 		if (signature != this.detailsSignature) {
 			this.detailsSignature = signature;
 			dom.content(document.getElementById('mnm-details'), this.renderDetails(st));
 		}
+		const scanOne = document.querySelector('#mnm-details button');
+		if (scanOne)
+			scanOne.disabled = st.running;
 		dom.content(document.getElementById('mnm-vendors'), this.vendorText(st.vendors));
 		document.getElementById('mnm-start').disabled = st.running;
 		document.getElementById('mnm-stop').disabled = !st.running;

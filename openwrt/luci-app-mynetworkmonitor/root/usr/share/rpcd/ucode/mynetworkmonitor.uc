@@ -295,8 +295,11 @@ const methods = {
 			const scan = load_scan();
 			let store = load_store();
 			// While a scan runs, its devices are shown merged in, without saving.
+			// The start of the scan is their time: with the current time every
+			// device of the scan would change every second, and the page would
+			// rebuild all its rows (docs/FEHLERGEDAECHTNIS.md, No. 11).
 			if (running && scan != null)
-				store = merge(store, scan, time());
+				store = merge(store, scan, scan.started);
 			const nets = router_networks();
 			for (let d in store.devices)
 				d.network = network_of(nets, d.ipv4);

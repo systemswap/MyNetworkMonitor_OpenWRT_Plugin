@@ -93,9 +93,14 @@ Details im Fenster, jede Gruppe auf und zu, jeder Haken an und aus, Gruppenhaken
 gehaltener Taste über eine Aktualisierung), Knopf in den Details stabil, höchstens vier Dienste nebeneinander, Ports
 auf höchstens zwei Zeilen. Bildschirmfotos im Testordner.
 
+Einmal im Ruhezustand und einmal **während laufender Scans**: dazu im Hintergrund fortlaufend Einzelgerät-Scans eines
+Geräts über `ubus call luci.mynetworkmonitor start` mit `target` starten (die verändern die Einstellungen des Nutzers
+nicht). Vorher prüfen, dass die Geräteliste nicht leer ist; sonst ein Gerät mit offenen Ports einzeln scannen.
+
 | Datum | Version | Ergebnis |
 |---|---|---|
 | 01.11.2026 | 0.0.1-beta | 58 Prüfungen grün; Pakete gebaut (apk 7,8 KB und 6 KB, Programm 16 KB); in der VM zwei Fehler im Backend gefunden (Fehlergedächtnis Nr. 1 und 2) |
 | 01.11.2026 | 0.0.2-beta | Scan der VM über ubus: Ports 22, 53, 80, 443 gefunden; Stopp mit Teilergebnis; Einschleusen über Bereich und Ports abgelehnt |
 | 01.11.2026 | 0.0.9-beta | Maustest bei 1920×1080 und 1366×768 ohne Befund; 129 Prüfungen grün |
 | 01.11.2026 | 0.0.13-beta | Stufe 3a: 16 Pakete identisch mit dem Desktop-Programm; 156 Prüfungen grün; im Heimnetz erkannt: SSH mit Version, HTTP mit Server, DNS, RDP mit Sicherheitsstufe, VNC mit Protokoll; Maustest ohne Befund |
+| 01.11.2026 | 0.0.18-beta | Maustest im Ruhezustand und während laufender Scans ohne Befund (beide Auflösungen) |

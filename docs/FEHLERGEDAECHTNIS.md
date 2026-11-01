@@ -167,3 +167,19 @@ Regeln:
 - **Im Code:** `htdocs/…/scan.js` (`renderDetails`).
 - **Abgesichert durch:** `tests/ui/check_page.py` – klickt jede Zeile an und prüft, dass nirgends „[object“ steht
   (schlug mit 0.0.13- und 0.0.14-beta an).
+
+## Nr. 11 – Seite: während eines Scans gingen Klicks auf Zeilen und „Scan this device“ verloren
+
+- **Entdeckt:** 01.11.2026, Version 0.0.16-beta (Maustest, während der Nutzer einen Scan laufen hatte: langsamer Klick
+  wählte die Zeile nicht, Knopf in den Details wurde ersetzt). **Behoben:** 0.0.18-beta.
+- **Warum:** Während eines Scans mischte das Backend dessen Geräte mit der aktuellen Uhrzeit als „zuletzt gesehen“ in
+  die Liste. Jede Sekunde änderte sich damit jedes Gerät des Scans, und die Seite baute all diese Zeilen neu
+  (Nr. 5 half nur bei unveränderten Daten). Die Details wurden zusätzlich bei jedem Wechsel zwischen „läuft“ und
+  „fertig“ neu gebaut, nur um den Knopf zu sperren.
+- **Lösung:** Während des Scans gilt dessen Beginn als Zeit; eine Zeile ändert sich nur, wenn sich am Gerät etwas
+  ändert. Zeilen werden schon beim Drücken der Maustaste gewählt. Der Knopf in den Details wird nur gesperrt oder
+  freigegeben, die Details werden nur bei Änderungen am Gerät neu gebaut.
+- **Nicht tun:** in Abfragen, die die Seite jede Sekunde holt, Werte mitgeben, die sich ohne Grund jede Sekunde ändern.
+- **Im Code:** `root/usr/share/rpcd/ucode/mynetworkmonitor.uc` (`status`), `htdocs/…/scan.js` (`renderTable`, `update`).
+- **Abgesichert durch:** `tests/ui/check_page.py`, auch während laufender Scans (im Hintergrund fortlaufend
+  Einzelgerät-Scans eines Geräts, siehe `docs/PRUEFUNGEN.md`).
