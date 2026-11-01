@@ -13,9 +13,13 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "../src/devices.h"
 #include "../src/json.h"
+#include "../src/packets.h"
+#include "../src/textdata.h"
 #include "../src/ports.h"
 #include "../src/targets.h"
+#include "../src/discover.h"
 #include "../src/tcpscan.h"
 
 static int failures, checks;
@@ -243,6 +247,132 @@ static void test_tcpscan_loopback(void)
 	close(l2);
 }
 
+static void test_arp(void)
+{
+	const uint8_t own[6] = { 0x02, 0x00, 0x5e, 0x00, 0x00, 0x01 };
+	uint8_t frame[MNM_ARP_FRAME_LEN], mac[6];
+	uint32_t found;
+
+	mnm_arp_build_request(frame, own, ip("192.0.2.1"), ip("192.0.2.7"));
+	CHECK(frame[0] == 0xff && frame[12] == 0x08 && frame[13] == 0x06 && frame[21] == 1);
+	CHECK(frame[38] == 192 && frame[41] == 7);
+	CHECK(mnm_arp_parse_reply(frame, sizeof(frame), &found, mac) == 0);   /* a request is no reply */
+
+	/* the answer of 192.0.2.7 with MAC 02:00:5e:12:34:56 */
+	frame[21] = 2;
+	const uint8_t theirs[6] = { 0x02, 0x00, 0x5e, 0x12, 0x34, 0x56 };
+	memcpy(frame + 22, theirs, 6);
+	frame[28] = 192; frame[29] = 0; frame[30] = 2; frame[31] = 7;
+	CHECK(mnm_arp_parse_reply(frame, sizeof(frame), &found, mac) == 1 && found == ip("192.0.2.7"));
+	CHECK(memcmp(mac, theirs, 6) == 0);
+	CHECK(mnm_arp_parse_reply(frame, sizeof(frame) - 1, &found, mac) == 0);  /* cut off */
+	memset(frame + 22, 0, 6);
+	CHECK(mnm_arp_parse_reply(frame, sizeof(frame), &found, mac) == 0);      /* zero sender */
+}
+
+static void test_icmp(void)
+{
+	uint8_t echo[MNM_ICMP_ECHO_LEN];
+	mnm_icmp_build_echo(echo, 0x1234, 7);
+	CHECK(echo[0] == 8 && mnm_inet_checksum(echo, sizeof(echo)) == 0);   /* checksum over all is 0 */
+
+	/* IPv4 header (20 bytes, TTL 63, from 192.0.2.9) + echo reply */
+	uint8_t reply[20 + MNM_ICMP_ECHO_LEN] = { 0x45, 0, 0, 36, 0, 0, 0, 0, 63, 1, 0, 0, 192, 0, 2, 9, 192, 0, 2, 1 };
+	memcpy(reply + 20, echo, sizeof(echo));
+	reply[20] = 0;
+	uint32_t from;
+	uint8_t ttl;
+	CHECK(mnm_icmp_parse_reply(reply, sizeof(reply), 0x1234, &from, &ttl) == 1 && from == ip("192.0.2.9") && ttl == 63);
+	CHECK(mnm_icmp_parse_reply(reply, sizeof(reply), 0x4321, &from, &ttl) == 0);   /* other identifier */
+	CHECK(mnm_icmp_parse_reply(reply, 27, 0x1234, &from, &ttl) == 0);              /* cut off */
+	reply[0] = 0x4f;   /* header length 60 > data */
+	CHECK(mnm_icmp_parse_reply(reply, sizeof(reply), 0x1234, &from, &ttl) == 0);
+	CHECK(strcmp(mnm_ttl_guess(63), "Linux, macOS or embedded") == 0 && strcmp(mnm_ttl_guess(127), "Windows") == 0 &&
+	      strcmp(mnm_ttl_guess(254), "Network device") == 0 && mnm_ttl_guess(0) == NULL);
+}
+
+static void test_leases(void)
+{
+	uint8_t mac[6];
+	uint32_t addr;
+	char name[64];
+
+	CHECK(mnm_lease_parse_line("1793519418 02:00:5e:aa:bb:cc 192.168.1.23 laptop-example 01:02:00:5e:aa:bb:cc\n", mac,
+				   &addr, name, sizeof(name)) == 1);
+	CHECK(addr == ip("192.168.1.23") && mac[5] == 0xcc && strcmp(name, "laptop-example") == 0);
+	CHECK(mnm_lease_parse_line("1793519418 02:00:5e:aa:bb:cd 192.168.1.24 * *", mac, &addr, name, sizeof(name)) == 1 &&
+	      name[0] == '\0');
+	CHECK(mnm_lease_parse_line("duid 00:01:00:01:2a:2b", mac, &addr, name, sizeof(name)) == 0);
+	CHECK(mnm_lease_parse_line("1793519418 1234 fd00::5 * 00:01", mac, &addr, name, sizeof(name)) == 0);
+	CHECK(mnm_lease_parse_line("", mac, &addr, name, sizeof(name)) == 0);
+	/* control characters in a host name never reach the output */
+	CHECK(mnm_lease_parse_line("1 02:00:5e:aa:bb:cc 192.168.1.2 a\x01" "b\x1b" "c *", mac, &addr, name, sizeof(name)) == 1 &&
+	      strcmp(name, "abc") == 0);
+}
+
+static void test_vendors(void)
+{
+	uint64_t prefix;
+	unsigned int bits;
+	char name[96];
+
+	CHECK(mnm_vendor_parse_line("00:00:0C\tCisco\tCisco Systems, Inc\n", &prefix, &bits, name, sizeof(name)) == 1);
+	CHECK(bits == 24 && prefix == 0x00000c000000ull && strcmp(name, "Cisco Systems, Inc") == 0);
+	CHECK(mnm_vendor_parse_line("00:1B:C5:00:00:00/36\tConvergi\tConverging Systems Inc.", &prefix, &bits, name,
+				    sizeof(name)) == 1 && bits == 36 && prefix == 0x001bc5000000ull);
+	CHECK(mnm_vendor_parse_line("8C:1F:64:A0:00:00/28\tShortOnly", &prefix, &bits, name, sizeof(name)) == 1 &&
+	      bits == 28 && strcmp(name, "ShortOnly") == 0);
+	CHECK(mnm_vendor_parse_line("# comment", &prefix, &bits, name, sizeof(name)) == 0);
+	CHECK(mnm_vendor_parse_line("00:00:0C", &prefix, &bits, name, sizeof(name)) == 0);
+	CHECK(mnm_vendor_parse_line("00:00:0C:00:00:00\tX", &prefix, &bits, name, sizeof(name)) == 0);
+	CHECK(mnm_vendor_parse_line("00:00:0C:00:00:00/40\tX", &prefix, &bits, name, sizeof(name)) == 0);
+	CHECK(mnm_vendor_parse_line("ZZ:00:0C\tX", &prefix, &bits, name, sizeof(name)) == 0);
+
+	/* longest prefix wins, over a small file */
+	char path[] = "/tmp/mnm-vendors-XXXXXX";
+	int fd = mkstemp(path);
+	FILE *f = fdopen(fd, "w");
+	fputs("02:00:5E\tShort\tWide Vendor\n02:00:5E:12:30:00/36\tN\tNarrow Vendor\n", f);
+	fclose(f);
+	struct mnm_devices devs = { 0 };
+	const uint8_t a[6] = { 0x02, 0x00, 0x5e, 0x99, 0x34, 0x56 }, b[6] = { 0x02, 0x00, 0x5e, 0x12, 0x30, 0x01 };
+	mnm_devices_set_mac(&devs, mnm_devices_get(&devs, 1), a);
+	mnm_devices_set_mac(&devs, mnm_devices_get(&devs, 2), b);
+	mnm_discover_vendors(path, &devs);
+	CHECK(strcmp(mnm_devices_find(&devs, 1)->vendor, "Wide Vendor") == 0);
+	CHECK(strcmp(mnm_devices_find(&devs, 2)->vendor, "Narrow Vendor") == 0);
+	mnm_devices_free(&devs);
+	unlink(path);
+}
+
+static void test_devices_json(void)
+{
+	struct mnm_devices devs = { 0 };
+	char *buf = NULL;
+	size_t size = 0;
+
+	struct mnm_device *d = mnm_devices_get(&devs, ip("192.168.1.9"));
+	snprintf(d->hostname, sizeof(d->hostname), "%s", "printer \"office\"");
+	mnm_devices_mark(&devs, d, MNM_SEEN_ARP | MNM_SEEN_LEASE);
+	mnm_devices_add_tcp(&devs, d, 631);
+	mnm_devices_add_tcp(&devs, d, 80);
+	mnm_devices_add_tcp(&devs, d, 80);
+	mnm_devices_get(&devs, ip("192.168.1.2"));
+
+	FILE *f = open_memstream(&buf, &size);
+	mnm_devices_write_json(&devs, f);
+	fclose(f);
+	/* ordered by address, ports sorted and without duplicates, quotes escaped */
+	CHECK(strstr(buf, "\"192.168.1.2\"") < strstr(buf, "\"192.168.1.9\""));
+	CHECK(strstr(buf, "\"tcp\":[80,631]") != NULL);
+	CHECK(strstr(buf, "printer \\\"office\\\"") != NULL);
+	CHECK(strstr(buf, "\"seen_by\":[\"arp\",\"lease\"]") != NULL);
+	/* the list itself keeps its order */
+	CHECK(devs.list[0].ipv4 == ip("192.168.1.9"));
+	free(buf);
+	mnm_devices_free(&devs);
+}
+
 int main(void)
 {
 	test_ipv4();
@@ -251,6 +381,11 @@ int main(void)
 	test_ports();
 	test_json();
 	test_tcpscan_loopback();
+	test_arp();
+	test_icmp();
+	test_leases();
+	test_vendors();
+	test_devices_json();
 	printf("%d checks, %d failed\n", checks, failures);
 	return failures ? 1 : 0;
 }

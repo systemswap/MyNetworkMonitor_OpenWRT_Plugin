@@ -1,0 +1,22 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Brings the settings of an older version to the current format (option
+# "version"). OpenWrt keeps a changed /etc/config/mynetworkmonitor on update, so
+# new options must be added here. Runs once after installing or updating.
+
+version=$(uci -q get mynetworkmonitor.scan.version)
+
+# Format 1 had one field "targets"; format 2 has the router networks as a list
+# and own ranges apart. A former range becomes an own range, nothing is lost.
+if [ "$version" = "1" ]; then
+	targets=$(uci -q get mynetworkmonitor.scan.targets)
+	uci -q delete mynetworkmonitor.scan.targets
+	[ -n "$targets" ] && uci set mynetworkmonitor.scan.ranges="$targets"
+	uci -q get mynetworkmonitor.scan.networks >/dev/null || uci add_list mynetworkmonitor.scan.networks='lan'
+	uci -q get mynetworkmonitor.scan.persist >/dev/null || uci set mynetworkmonitor.scan.persist='0'
+	uci set mynetworkmonitor.scan.version='2'
+	uci commit mynetworkmonitor
+fi
+
+exit 0

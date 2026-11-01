@@ -19,8 +19,9 @@ Für OpenWrt 25.12 und neuer, auf allen Prozessorarten, für die OpenWrt Pakete 
 
 ## Privatsphäre
 
-Das Programm sendet keine Nutzungsdaten und verbindet sich nur mit den Geräten in den Bereichen, die du
-zum Scannen auswählst. Ergebnisse liegen im Arbeitsspeicher des Routers (`/tmp`) und sind nach einem
+Das Programm sendet keine Nutzungsdaten und verbindet sich nur mit den Geräten in den Netzen, die du
+zum Scannen auswählst – nur private Netze, nie Adressen im Internet. Ins Internet geht es nur, wenn du
+die Herstellerliste lädst (von www.wireshark.org). Ergebnisse liegen im Arbeitsspeicher des Routers (`/tmp`) und sind nach einem
 Neustart weg. Scanne nur Netze, für die du die Erlaubnis hast – Portscans und Abfragen können empfindliche
 Geräte wie Steuerungen stören.
 

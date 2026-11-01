@@ -52,6 +52,9 @@ define Package/luci-app-mynetworkmonitor/postinst
 # After installing on a running system: reload rpcd for the new backend and
 # drop the cached menu, so that the page appears without a reboot.
 [ -n "$${IPKG_INSTROOT}" ] && exit 0
+# uci-defaults run only at boot by themselves; after an update on a running
+# system the settings are brought to the current format here.
+[ -x /etc/uci-defaults/90-luci-mynetworkmonitor ] && /etc/uci-defaults/90-luci-mynetworkmonitor && rm -f /etc/uci-defaults/90-luci-mynetworkmonitor
 rm -rf /tmp/luci-indexcache* /tmp/luci-modulecache 2>/dev/null
 /etc/init.d/rpcd reload 2>/dev/null
 exit 0

@@ -18,10 +18,23 @@ warum es so gebaut ist. Bei jeder Struktur- oder Technikentscheidung aktualisier
 
 ## Ablauf eines Scans
 
-1. Die Seite speichert die Einstellungen in UCI (`/etc/config/mynetworkmonitor`) und ruft über rpcd „Scan starten“.
-2. Das Backend startet `mynetworkmonitor-scan` einmal; läuft schon einer, lehnt es ab.
-3. Das Scanprogramm schreibt Fortschritt und Ergebnis nach `/tmp/mynetworkmonitor/` (RAM) und endet.
-4. Die Seite fragt den Stand ab und zeigt das Ergebnis.
+1. Die Seite schickt die Werte ihres Formulars mit „Start scan“ an das Backend; es prüft sie, speichert sie in UCI
+   (`/etc/config/mynetworkmonitor`), setzt aus den angekreuzten Netzen des Routers und den eigenen Bereichen die
+   Zielliste zusammen und startet `mynetworkmonitor-scan` im Hintergrund. Läuft schon einer, lehnt es ab. „Scan this
+   device“ scannt nur ein Gerät und lässt die gespeicherten Einstellungen unverändert.
+2. Das Scanprogramm sucht zuerst die Geräte (Nachbartabelle, DHCP-Zuteilungen, Herstellerliste, ARP in den eigenen
+   Netzen, Ping), dann ihre TCP-Ports, und schreibt `/tmp/mynetworkmonitor/scan.json` höchstens einmal je Sekunde neu.
+3. Die Seite fragt jede Sekunde den Stand ab. Das Backend liefert die Geräteliste mit dem laufenden Scan
+   hineingemischt (ohne zu speichern); ist der Scan beendet, mischt es ihn einmal fest in die Liste.
+
+## Geräteliste
+
+- Liegt in `/tmp/mynetworkmonitor/store/devices.json` (RAM) oder, mit „Keep after reboot“, in
+  `/etc/mynetworkmonitor/devices.json` (Flash, einmal je Scan geschrieben). Dort liegt auch die Herstellerliste `manuf`.
+- Ein Gerät ist dasselbe, wenn die MAC-Adresse gleich ist; ohne MAC (nur per Ping gefunden) zählt die IPv4-Adresse.
+- Ein vollständiger Portscan eines Geräts ersetzt seine Ports, ein abgebrochener ergänzt nur.
+- „Online“ heißt: im letzten Scan gesehen. Gefundene Geräte bleiben bei „Stop“ und über Scans hinweg; „Clear table“
+  leert die Liste.
 
 Es läuft **kein Dienst, der lauscht**: Von außen ist nichts erreichbar, und ohne laufenden Scan verbraucht das
 Paket keinen Arbeitsspeicher.
@@ -36,8 +49,9 @@ Lesen behandelt, nie über das Umdeuten von Speicher.
 
 | Datei | Ort | Formatversion | Übernahme älterer Stände |
 |---|---|---|---|
-| Einstellungen | `/etc/config/mynetworkmonitor` (UCI) | Option `version` | fehlende Optionen nehmen die Vorgabe |
-| Ergebnis | `/tmp/mynetworkmonitor/result.json` | Feld `format` | wird nur gelesen, solange das Feld passt |
+| Einstellungen | `/etc/config/mynetworkmonitor` (UCI) | Option `version` (2) | `uci-defaults/90-luci-mynetworkmonitor` bringt ältere Stände auf das aktuelle Format |
+| Laufender Scan | `/tmp/mynetworkmonitor/scan.json` | Feld `format` (2) | ein anderes Format wird nicht gelesen |
+| Geräteliste | `…/store/devices.json` bzw. `/etc/mynetworkmonitor/devices.json` | Feld `format` (1) | ein anderes Format gilt als leer |
 
 ## Entscheidungen
 

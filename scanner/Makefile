@@ -21,8 +21,9 @@ WARN    := -std=c11 -D_DEFAULT_SOURCE -Wall -Wextra -Wshadow -Wconversion -Wno-s
            -Wformat=2 -Wstrict-prototypes -Wmissing-prototypes -Werror
 DEFS    := -DMNM_VERSION='"$(VERSION)"'
 
-SRC     := src/main.c src/targets.c src/ports.c src/json.c src/tcpscan.c
-LIBSRC  := src/targets.c src/ports.c src/json.c src/tcpscan.c
+LIBSRC  := src/targets.c src/ports.c src/json.c src/tcpscan.c src/packets.c src/textdata.c src/devices.c \
+           src/discover.c
+SRC     := src/main.c $(LIBSRC)
 
 .PHONY: all test clean
 

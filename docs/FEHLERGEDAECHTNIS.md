@@ -61,3 +61,27 @@ Regeln:
 - **Nicht tun:** Zahlen als Beispielwerte in `args` eines ucode-Backends.
 - **Im Code:** `mynetworkmonitor.uc` (`start`), `htdocs/…/scan.js` (`handleStart`).
 - **Abgesichert durch:** Test in der VM (Start, Stand, Ergebnis, Stopp, Versuche mit `;` und `$(…)` abgelehnt).
+
+## Nr. 3 – Geräteliste: qsort mit Nullzeiger bei Geräten ohne offene Ports
+
+- **Entdeckt:** 01.11.2026 vor 0.0.4-beta (UBSan in den Tests: „null pointer passed as argument 1“). **Behoben:**
+  0.0.4-beta, vor dem ersten Commit des Codes.
+- **Was:** `mnm_devices_write_json` sortierte die Ports jedes Geräts mit `qsort(d->tcp, 0, …)`; bei einem Gerät ohne
+  offene Ports ist `d->tcp` NULL. Laut C-Norm undefiniert, auch für null Elemente – meist harmlos, aber ein
+  Optimierer darf daraus schließen, der Zeiger sei nie NULL.
+- **Lösung:** nur sortieren, wenn mindestens zwei Ports da sind.
+- **Nicht tun:** Bibliotheksfunktionen mit NULL aufrufen, „weil die Länge 0 ist“ (auch `memcpy`, `memcmp`).
+- **Im Code:** `scanner/src/devices.c` (`mnm_devices_write_json`).
+- **Abgesichert durch:** `test_devices_json` unter UBSan.
+
+## Nr. 4 – Update: alte Einstellungen bleiben im alten Format
+
+- **Entdeckt:** 01.11.2026, beim Update von 0.0.3-beta auf 0.0.4-beta in der VM. **Behoben:** 0.0.4-beta.
+- **Was:** OpenWrt behält eine geänderte `/etc/config/mynetworkmonitor` beim Update (Konfigurationsdatei des Pakets).
+  Die neue Fassung erwartet `networks` und `ranges`, die alte hatte `targets` – der eingetragene Bereich wäre
+  stillschweigend nicht mehr benutzt worden.
+- **Lösung:** `root/etc/uci-defaults/90-luci-mynetworkmonitor` bringt Format 1 auf 2 (`targets` → `ranges`, `lan`
+  angekreuzt, `persist` aus); `postinst` ruft es nach einem Update im laufenden Betrieb auf.
+- **Nicht tun:** Optionen umbenennen ohne Übernahme; die Option `version` vergessen hochzuzählen.
+- **Im Code:** `openwrt/luci-app-mynetworkmonitor/root/etc/uci-defaults/90-luci-mynetworkmonitor`, `Makefile` (`postinst`).
+- **Abgesichert durch:** Lauf in der VM auf einer Einstellung im Format 1.

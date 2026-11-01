@@ -3,13 +3,13 @@
 		"description": "Grant access to the MyNetworkMonitor network scanner",
 		"read": {
 			"ubus": {
-				"luci.mynetworkmonitor": [ "status", "result" ]
+				"luci.mynetworkmonitor": [ "status", "networks" ]
 			},
 			"uci": [ "mynetworkmonitor" ]
 		},
 		"write": {
 			"ubus": {
-				"luci.mynetworkmonitor": [ "start", "stop" ]
+				"luci.mynetworkmonitor": [ "start", "stop", "clear", "update_vendors", "set_persist" ]
 			},
 			"uci": [ "mynetworkmonitor" ]
 		}
