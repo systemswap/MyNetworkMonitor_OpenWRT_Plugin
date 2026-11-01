@@ -278,3 +278,16 @@ Zeitlich geordnet, neue ans Ende.
   als Hex gelesen; v2c-Ausnahmen (noSuchObject) bleiben leer statt als Text zu erscheinen. Der Systemname füllt einen
   fehlenden Gerätenamen (Angabe „Name: …“ am Anfang, allgemein in `main.c`).
 
+### 01.11.2026 – Bau aller Architekturen und Releases auf GitHub
+
+- **Entschieden (Wunsch des Nutzers):** `.github/workflows/build-and-release.yml` baut für jede der 35
+  Paketarchitekturen von OpenWrt 25.12.6 im offiziellen SDK-Container (`openwrt/sdk:<architektur>-25.12.6`) und legt
+  ein Release mit allen Paketen an – einmal je Version in `VERSION`, wenn es dafür noch keins gibt; Beta-Versionen als
+  Vorabversion. Davor laufen die Tests (mbedTLS aus dem Quellarchiv, das auch das SDK nimmt, mit Prüfsumme).
+- **mbedTLS im SDK:** Es liegt in der Basis-Paketquelle von OpenWrt. Statt sie in jedem Bau ganz zu klonen, holt der
+  Bau nur `package/libs/mbedtls` aus genau dem Commit, aus dem das SDK gebaut ist (aus `feeds.conf.default`).
+- **Dateinamen im Release:** `mynetworkmonitor-scan_<version>_<architektur>.apk` (die Pakete selbst heißen in allen
+  Architekturen gleich), `luci-app-mynetworkmonitor_<version>_all.apk` einmal, dazu `ANLEITUNG.txt`, `LICENSE`,
+  `THIRD-PARTY-NOTICES.md` und `SHA256SUMS`. Die Pakete sind nicht signiert; die Installation bestätigt das.
+- **Aktionen** auf Commits festgelegt, nicht auf Tags (ein Tag kann auf anderen Code zeigen).
+

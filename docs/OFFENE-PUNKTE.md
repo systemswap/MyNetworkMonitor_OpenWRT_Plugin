@@ -34,7 +34,6 @@ Ausbaustufen, jede für sich benutzbar:
 
 ## Später
 
-- **Alle Architekturen bauen:** GitHub-Bau mit dem SDK je Architektur – nur auf Anweisung des Nutzers.
 - **Test auf einem echten Router:** Pakete für Linksys MX4200 v1 (`aarch64_cortex-a53`, OpenWrt 25.12) ab 0.0.26-beta
   gebaut; Test auf dem Gerät steht aus (Installation, Scan, Rundrufe über WLAN-Brücke, Laufzeit und Speicher).
 

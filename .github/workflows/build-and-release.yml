@@ -1,0 +1,209 @@
+name: Build & Release
+
+# Builds the packages for every package architecture of OpenWrt and publishes them as a release - once per
+# version in the file VERSION: when there is no release for it yet. Started by every push to main, or by hand.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  OPENWRT_RELEASE: '25.12.6'
+  # mbedTLS for the tests on the runner: the same source archive the OpenWrt SDK uses
+  MBEDTLS_VERSION: '3.6.7'
+  MBEDTLS_SHA256: 'a7e8bcbec0e6f761b4af24f25677626b35f762f68eef79c08677a363212d11f6'
+  DO_NOT_TRACK: '1'
+
+# Every action is pinned to a commit, with its version as a comment: a tag can be moved to other code at any time,
+# a commit cannot. To update, look up the commit of the new tag (git ls-remote --tags <repository>) and replace both.
+#   GitHub's own actions: https://github.com/actions/{checkout,upload-artifact,download-artifact}
+#   release upload: https://github.com/softprops/action-gh-release (MIT)
+# The packages are built in the official SDK containers of OpenWrt (https://hub.docker.com/r/openwrt/sdk).
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.check.outputs.build }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Is there a release for this version?
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(cat VERSION)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ! gh release view "v$version" > /dev/null 2>&1; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release v$version exists, nothing to build."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # No packages from a state whose tests fail.
+  tests:
+    needs: check-version
+    if: needs.check-version.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: mbedTLS for the tests
+        run: |
+          curl -fsSL -o mbedtls.tar.bz2 \
+            "https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-$MBEDTLS_VERSION/mbedtls-$MBEDTLS_VERSION.tar.bz2"
+          echo "$MBEDTLS_SHA256  mbedtls.tar.bz2" | sha256sum -c -
+          tar xjf mbedtls.tar.bz2
+          cd "mbedtls-$MBEDTLS_VERSION"
+          # with threads, as OpenWrt builds it
+          python3 scripts/config.py set MBEDTLS_THREADING_C
+          python3 scripts/config.py set MBEDTLS_THREADING_PTHREAD
+          make -j"$(nproc)" lib CFLAGS="-O1 -g" > /dev/null
+
+      - name: Tests
+        run: make -C scanner test MBEDTLS="$GITHUB_WORKSPACE/mbedtls-$MBEDTLS_VERSION"
+
+  build:
+    needs: [check-version, tests]
+    if: needs.check-version.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - aarch64_cortex-a53
+          - aarch64_cortex-a72
+          - aarch64_cortex-a76
+          - aarch64_generic
+          - arm_arm1176jzf-s_vfp
+          - arm_arm926ej-s
+          - arm_cortex-a15_neon-vfpv4
+          - arm_cortex-a5_vfpv4
+          - arm_cortex-a7
+          - arm_cortex-a7_neon-vfpv4
+          - arm_cortex-a7_vfpv4
+          - arm_cortex-a8_vfpv3
+          - arm_cortex-a9
+          - arm_cortex-a9_neon
+          - arm_cortex-a9_vfpv3-d16
+          - armeb_xscale
+          - arm_fa526
+          - arm_xscale
+          - i386_pentium4
+          - i386_pentium-mmx
+          - loongarch64_generic
+          - mips_24kc
+          - mips64el_mips64r2
+          - mips64_mips64r2
+          - mips64_octeonplus
+          - mipsel_24kc
+          - mipsel_24kc_24kf
+          - mipsel_74kc
+          - mipsel_mips32
+          - mips_mips32
+          - powerpc_464fp
+          - powerpc64_e5500
+          - powerpc_8548
+          - riscv64_generic
+          - x86_64
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Build in the OpenWrt SDK
+        env:
+          ARCH: ${{ matrix.arch }}
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          mkdir -p out && chmod 777 out
+          # The repository is the feed, read-only; the packages come out in out/.
+          docker run --rm -e ARCH -e VERSION \
+            -v "$GITHUB_WORKSPACE:/src:ro" -v "$GITHUB_WORKSPACE/out:/out" \
+            "openwrt/sdk:$ARCH-$OPENWRT_RELEASE" bash -euo pipefail -c '
+              cd /builder
+              [ -f Makefile ] || ./setup.sh
+              # mbedTLS is in the base feed of OpenWrt; instead of cloning all of OpenWrt, only its package
+              # directory, from exactly the commit this SDK was built from.
+              commit=$(sed -n "s|^src-git --root=package base .*\^\([0-9a-f]*\)$|\1|p" feeds.conf.default)
+              git init -q /tmp/openwrt
+              git -C /tmp/openwrt remote add origin https://github.com/openwrt/openwrt.git
+              git -C /tmp/openwrt sparse-checkout set package/libs/mbedtls
+              git -C /tmp/openwrt fetch -q --depth 1 origin "$commit"
+              git -C /tmp/openwrt checkout -q FETCH_HEAD
+              cp -r /tmp/openwrt/package/libs/mbedtls package/
+              echo "src-link mynetworkmonitor /src/openwrt" > feeds.conf
+              ./scripts/feeds update mynetworkmonitor > /dev/null
+              ./scripts/feeds install -a -p mynetworkmonitor > /dev/null
+              printf "CONFIG_PACKAGE_libmbedtls=m\nCONFIG_PACKAGE_mynetworkmonitor-scan=m\nCONFIG_PACKAGE_luci-app-mynetworkmonitor=m\n" >> .config
+              make defconfig > /dev/null
+              make -j"$(nproc)" package/mbedtls/compile > /tmp/mbedtls.log 2>&1 || { tail -50 /tmp/mbedtls.log; exit 1; }
+              make package/mynetworkmonitor-scan/compile package/luci-app-mynetworkmonitor/compile V=s > /tmp/build.log 2>&1 \
+                || { tail -80 /tmp/build.log; exit 1; }
+              # A compiler warning is an error in the scanner; stop on any that slipped through anyway.
+              if grep -E "\.c:[0-9]+:[0-9]+: warning" /tmp/build.log; then exit 1; fi
+              cp bin/packages/*/mynetworkmonitor/mynetworkmonitor-scan-*.apk "/out/mynetworkmonitor-scan_${VERSION}_${ARCH}.apk"
+              cp bin/packages/*/mynetworkmonitor/luci-app-mynetworkmonitor-*.apk "/out/luci-app-mynetworkmonitor_${VERSION}_all.apk"
+            '
+          ls -la out
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: scan-${{ matrix.arch }}
+          path: out/mynetworkmonitor-scan_*.apk
+
+      # The page is the same for every router; the one from the x86_64 build is published.
+      - if: matrix.arch == 'x86_64'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: luci-app
+          path: out/luci-app-mynetworkmonitor_*.apk
+
+  release:
+    needs: [check-version, build]
+    if: needs.check-version.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Instructions, licence and checksums
+        run: |
+          cp packaging/ANLEITUNG.txt LICENSE THIRD-PARTY-NOTICES.md dist/
+          cd dist && sha256sum *.apk > SHA256SUMS && ls -la
+
+      # The release text is the commit message up to a line of three dashes; a longer reasoning below it
+      # stays in the history only.
+      - name: Release notes
+        id: notes
+        env:
+          FULL: ${{ github.event.head_commit.message || format('Build of commit {0}', github.sha) }}
+        run: |
+          short=$(printf '%s\n' "$FULL" | sed '/^---$/,$d')
+          {
+            echo 'body<<RELEASE_NOTES_EOF'
+            printf '%s\n\n' "$short"
+            echo "Packages for OpenWrt $OPENWRT_RELEASE (apk). Pick mynetworkmonitor-scan for the architecture of the router"
+            echo "(apk --print-arch on the router) and luci-app-mynetworkmonitor; installation: ANLEITUNG.txt."
+            echo 'RELEASE_NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: GitHub release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: ${{ needs.check-version.outputs.version }}
+          body: ${{ steps.notes.outputs.body }}
+          prerelease: ${{ contains(needs.check-version.outputs.version, 'beta') }}
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
