@@ -32,4 +32,7 @@ void test_probes_udp(void);
 /* The tests of the discovery methods (test_bc.c). */
 void test_bc(void);
 
+/* The tests of the TLS connections (test_tls.c). */
+void test_tls(void);
+
 #endif

@@ -11,10 +11,11 @@ eigene Pakete installiert; sie werden zur Laufzeit geladen und nicht mit diesem 
 
 | Bestandteil | Lizenz | Wofür | Quelle |
 |---|---|---|---|
-| mbedTLS (über das OpenWrt-Paket libmbedtls) | Apache-2.0 | Zertifikate von Webseiten lesen (Stufe 4) | https://github.com/Mbed-TLS/mbedtls |
+| mbedTLS 3.6 (über das OpenWrt-Paket libmbedtls; gebaut und getestet mit 3.6.7) | Apache-2.0 OR GPL-2.0-or-later (Text: `licenses/mbedtls-LICENSE.txt`) | HTTPS erkennen und Zertifikate lesen; nur in `scanner/src/tlsconn.c` | https://github.com/Mbed-TLS/mbedtls |
 
 Nur beim Entwickeln: das SDK von OpenWrt (GPL-2.0, https://openwrt.org), für die Tests auf dem PC der C-Compiler
-des Systems.
+des Systems und mbedTLS aus demselben Quellarchiv, das das SDK benutzt (fest in das Testprogramm gebunden, wird
+nicht weitergegeben).
 
 ## Daten
 

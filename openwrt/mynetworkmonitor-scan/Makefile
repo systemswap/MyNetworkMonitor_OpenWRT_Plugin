@@ -23,6 +23,8 @@ define Package/mynetworkmonitor-scan
   SECTION:=net
   CATEGORY:=Network
   TITLE:=MyNetworkMonitor network scanner
+  # HTTPS and certificates; part of every OpenWrt image with LuCI over HTTPS or package downloads
+  DEPENDS:=+libmbedtls
 endef
 
 define Package/mynetworkmonitor-scan/description
@@ -38,7 +40,8 @@ endef
 
 define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR) \
-		CC="$(TARGET_CC)" CFLAGS="$(TARGET_CFLAGS)" LDFLAGS="$(TARGET_LDFLAGS)" \
+		CC="$(TARGET_CC)" CFLAGS="$(TARGET_CFLAGS) $(TARGET_CPPFLAGS)" LDFLAGS="$(TARGET_LDFLAGS)" \
+		TLS_INCLUDE="$(STAGING_DIR)/usr/include" \
 		VERSION="$(MNM_VERSION)" BUILD="$(PKG_BUILD_DIR)/build" all
 endef
 

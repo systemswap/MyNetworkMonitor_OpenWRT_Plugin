@@ -46,10 +46,15 @@ eigener `ArtifactsPath`, Läufe im Wechsel.
 
 ### Tests auf dem PC
 
-    cd scanner && make BUILD=<testordner>/host test
+    cd scanner && make BUILD=<testordner>/host MBEDTLS=<testordner>/host/mbedtls-3.6.7 test
 
-Eigene kleine Testsammlung (`scanner/tests/tests.c`), gebaut mit AddressSanitizer und UBSan: Ziel- und Portlisten,
-JSON-Ausgabe mit ungültigem UTF-8, TCP-Scan gegen lauschende und geschlossene Ports auf 127.0.0.1.
+Eigene kleine Testsammlung (`scanner/tests/`), gebaut mit AddressSanitizer und UBSan: Ziel- und Portlisten,
+JSON-Ausgabe mit ungültigem UTF-8, TCP-Scan gegen lauschende und geschlossene Ports auf 127.0.0.1, alle Sonden und
+Rundruf-Verfahren an erfundenen Antworten und gegen nachgespielte Geräte, TLS gegen einen Testserver. `MBEDTLS`
+zeigt auf mbedTLS, gebaut aus dem Quellarchiv des SDK (`dl/mbedtls-3.6.7.tar.bz2`) mit `make lib`, vorher
+`scripts/config.py set MBEDTLS_THREADING_C` und `MBEDTLS_THREADING_PTHREAD` wie bei OpenWrt; ohne `MBEDTLS` wird
+ein installiertes mbedTLS gesucht. Für das SDK muss `package/mbedtls` aus dem OpenWrt-Repository (gleicher Stand
+wie das SDK) im SDK liegen und `CONFIG_PACKAGE_libmbedtls=m` gesetzt sein.
 
 ### Pakete bauen
 
@@ -122,3 +127,4 @@ nicht). Vorher prüfen, dass die Geräteliste nicht leer ist; sonst ein Gerät m
 | 01.11.2026 | 0.0.23-beta | SMB-Versionen: 6 Pakete identisch (3.1.1 mit Verhandlungsangabe, wie Desktop 7.3.0.35); 228 Prüfungen grün (nachgespielter Dateiserver nimmt 3.1.1 nur mit Verhandlungsangabe an); im Heimnetz an zwei Geräten 2.0.2 bis 3.1.1 erkannt, 1.0 abgeschaltet. Maustest auf Wunsch des Nutzers zurückgestellt bis zum Abschluss der Stufe |
 | 01.11.2026 | 0.0.24-beta | Zusammenführung im Backend: `check_merge.py` mit altem Stand 4 Fehler, mit neuem ohne Befund; Bestand des Routers danach unverändert |
 | 01.11.2026 | 0.0.25-beta | Suche per Multicast und NetBIOS: 32 Pakete identisch (Prüfskript erfasst jetzt auch nicht-statische Arrays – vorher wären 5 ungeprüft geblieben); 268 Prüfungen grün (Auswertung aller fünf Verfahren an erfundenen Antworten, HTTP-Abruf mit chunked-Antwort gegen Testserver, Anfrage genau die des Desktop-Programms); im Heimnetz: 7 Geräte über SSDP mit Name, Hersteller und Modell, 13 über mDNS, 3 über WS-Discovery (Drucker/Scanner, Windows-Rechner), 3 über NetBIOS; ganzer Lauf 18,5 s |
+| 01.11.2026 | 0.0.26-beta | TLS-Grundlage: 286 Prüfungen grün (Handschlag, Zertifikatsfelder, Anfrage über TLS gegen Testserver mit selbst signiertem Zertifikat; Server ohne TLS; stummer Server); Paket hängt von `libmbedtls21` ab, in der VM vorhanden, Scanner startet und findet 30 Geräte |

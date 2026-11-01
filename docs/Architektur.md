@@ -240,3 +240,18 @@ Zeitlich geordnet, neue ans Ende.
   - Empfangen wird mit `poll` statt wechselnder, liegengelassener Empfangsaufträge; der Router sieht mindestens alle
     Antworten, die das Desktop-Programm sieht.
 
+### 01.11.2026 – TLS über mbedTLS
+
+- **Entschieden (mit Zustimmung des Nutzers):** HTTPS-Erkennung und Zertifikate über mbedTLS, die TLS-Bibliothek von
+  OpenWrt (`libmbedtls`, auf jedem Abbild mit LuCI über HTTPS oder Paket-Downloads schon da; fehlt sie, holt `apk`
+  sie beim Installieren). Gebunden wird dynamisch; das Paket wächst nicht. mbedTLS kennt nur `scanner/src/tlsconn.c`
+  (Verbindung, Lesen, Schreiben, Zertifikatsfelder); alles andere sieht nur dessen schmale Schnittstelle.
+- **Zertifikate werden gelesen, nicht geprüft** (`MBEDTLS_SSL_VERIFY_NONE`): Es geht darum, wer ein Gerät zu sein
+  behauptet; Geräte im eigenen Netz haben meist selbst signierte Zertifikate. Nichts davon wird für etwas vertraut.
+- **Grenzen der OpenWrt-Fassung:** TLS 1.2 und 1.3; kein reiner RSA- und kein DHE-RSA-Schlüsselaustausch, kein
+  TLS 1.0/1.1 (mbedTLS 3). Sehr alte Geräte, die nur das können, werden trotzdem als TLS erkannt – ihre Antwort ist
+  ein TLS-Datensatz –, ihr Zertifikat bleibt aber unbekannt (`MNM_TLS_REFUSED`).
+- **Tests:** auf dem PC mit mbedTLS aus demselben Quellarchiv wie das SDK, gebaut im lokalen Testordner
+  (`make test MBEDTLS=<ordner>`), mit Thread-Unterstützung wie bei OpenWrt; der TLS-Test erzeugt zur Laufzeit ein
+  selbst signiertes Zertifikat.
+
