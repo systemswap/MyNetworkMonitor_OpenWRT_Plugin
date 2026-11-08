@@ -295,3 +295,29 @@ Regeln:
 - **Abgesichert durch:** `tests/ui/check_page.py` („addresses in the device column stay on one line“, vergleicht die
   Angabe in „Device“ mit der Spalte IPV4; mit dem alten Stand 10 Treffer bei 1366×768) und „device table fits its
   area“.
+
+## Nr. 18 – Anleitung: Installation über die Router-Oberfläche bricht mit Fehlercode 99 ab
+
+- **Entdeckt:** 08.11.2026, Version 0.0.28-beta (Meldung des Nutzers vom ersten echten Router: „beendet mit
+  errorcode 99“). Die falsche Angabe stand seit 0.0.28-beta (Commit 1a8e96a) in der Anleitung. **Behoben:** in
+  0.0.28-beta (nur Doku, Release-Begleitdatei ersetzt).
+- **Was:** `packaging/ANLEITUNG.txt` und `README.md` nannten als ersten Weg LuCI *System → Software → Paket
+  hochladen…* mit „die Frage nach dem nicht signierten Paket bestätigen“. Die Installation brach dort immer ab.
+- **Warum:** Unsere Pakete sind nicht mit einem Schlüssel aus `/etc/apk/keys` signiert. LuCI fragt zwar nach, ruft
+  dann aber `/usr/libexec/package-manager-call install /tmp/upload.apk` auf. Für apk reicht dieses Skript nur `-r` und
+  `--force-overwrite` durch, alles andere verwirft es. apk läuft also ohne `--allow-untrusted` und endet mit
+  „UNTRUSTED signature“, Code 99. Getestet worden war vorher nur der Weg über SSH.
+- **Wie belegt:** in der Test-VM (OpenWrt 25.12.6) mit den Paketen des Releases: ohne `--allow-untrusted` Code 99
+  („UNTRUSTED signature“), mit Code 0. Eine Scanner-Datei fremder Architektur gibt dagegen Code 2
+  („uninstallable“, „arch: …“). Danach das LuCI-Skript in der VM nachgelesen.
+- **Lösung:** Installation nur noch per SSH beschrieben: Weg A lädt die Dateien auf dem Router mit `wget` (der Link
+  wird aus dem Release kopiert, `apk add` selbst nimmt keine Adressen an), Weg B kopiert sie mit `scp -O` vom
+  Rechner (der Router hat keinen SFTP-Server; neueres OpenSSH nutzt ohne `-O` SFTP und bricht ab). Beide Wege in der
+  VM geprüft. Dazu eine kurze Liste der Fehlercodes. Verworfen: eigene Signatur – den öffentlichen Schlüssel müsste
+  man ohnehin einmal per SSH nach `/etc/apk/keys` legen, und ein Schlüsselpaket wäre selbst unsigniert.
+- **Nicht tun:** einen Installationsweg in die Anleitung schreiben, der nicht auf einem OpenWrt mit genau diesem
+  Paketformat ausprobiert wurde; auf eine Rückfrage in der Oberfläche als Beleg vertrauen, dass ein Schalter
+  ankommt.
+- **Wo:** `packaging/ANLEITUNG.txt`, `README.md` (Abschnitt „Installation“).
+- **Abgesichert durch:** keinen automatischen Test. Die Wege A und B und die beiden Fehlercodes wurden von Hand in
+  der Test-VM geprüft.

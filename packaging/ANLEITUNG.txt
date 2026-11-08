@@ -16,17 +16,36 @@ Vorher prüfen (Router-Oberfläche, Status -> Übersicht):
   - Firmware-Version: OpenWrt 25.12.x (ältere Versionen nutzen ein anderes Paketformat)
   - die Architektur wie oben
 
-Installieren (im Browser):
-  1. Router-Oberfläche öffnen und anmelden.
-  2. System -> Software -> "Paket hochladen..."
-  3. Zuerst  mynetworkmonitor-scan_..._<architektur>.apk  hochladen und installieren.
-     Die Frage nach dem nicht signierten Paket bestätigen.
-  4. Dann    luci-app-mynetworkmonitor_..._all.apk  genauso.
-  5. Seite neu laden: Netzwerk -> MyNetworkMonitor -> "Start scan".
+Installieren (per SSH):
+  Die Pakete sind nicht von OpenWrt signiert. Darum geht es nur per SSH mit
+  "--allow-untrusted". Über die Router-Oberfläche (System -> Software ->
+  "Paket hochladen...") bricht die Installation mit "UNTRUSTED signature"
+  bzw. Fehlercode 99 ab: Die Oberfläche gibt diesen Schalter nicht weiter.
 
-Installieren (per SSH, alternativ):
-  Dateien nach /tmp kopieren, dann
-    apk add --allow-untrusted /tmp/mynetworkmonitor-scan_*.apk /tmp/luci-app-mynetworkmonitor_*.apk
+  SSH gibt es unter Linux, macOS und Windows 10/11 schon (Terminal bzw.
+  PowerShell). Anmelden mit dem Passwort der Router-Oberfläche:
+    ssh root@192.168.1.1          (Adresse des Routers einsetzen)
+
+  Weg A – der Router lädt die Dateien selbst (braucht Internet):
+    Im Release bei beiden Dateien per Rechtsklick die Link-Adresse kopieren, dann
+      wget -O /tmp/scan.apk '<Adresse der Datei mynetworkmonitor-scan_..._<architektur>.apk>'
+      wget -O /tmp/luci.apk '<Adresse der Datei luci-app-mynetworkmonitor_..._all.apk>'
+      apk add --allow-untrusted /tmp/scan.apk /tmp/luci.apk
+
+  Weg B – die Dateien vom Rechner kopieren (z. B. von einem USB-Stick):
+    Auf dem Rechner, im Ordner mit den Dateien:
+      scp -O mynetworkmonitor-scan_*.apk luci-app-mynetworkmonitor_*.apk root@192.168.1.1:/tmp/
+    ("-O" ist nötig, weil der Router kein SFTP kann; unter Windows die Dateinamen
+    ausschreiben statt "*".) Dann auf dem Router:
+      apk add --allow-untrusted /tmp/mynetworkmonitor-scan_*.apk /tmp/luci-app-mynetworkmonitor_*.apk
+
+  Danach in der Router-Oberfläche die Seite neu laden:
+  Netzwerk -> MyNetworkMonitor -> "Start scan".
+
+Fehlercodes von apk:
+  99  UNTRUSTED signature – ohne "--allow-untrusted" installiert (siehe oben)
+   2  "uninstallable", "arch: ..." – Scanner-Datei für eine andere Architektur;
+      die passende Datei nehmen (apk --print-arch)
 
 Benötigt werden luci-base, rpcd-mod-ucode und libmbedtls. Auf Routern mit der
 normalen OpenWrt-Oberfläche ist alles schon vorhanden; sonst lädt der Router es
