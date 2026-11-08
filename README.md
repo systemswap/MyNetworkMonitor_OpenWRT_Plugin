@@ -17,8 +17,17 @@ Die Pakete stehen unter *Releases* dieses Repositorys – zunächst für `aarch6
 Raspberry Pi 3 mit 64 Bit), `arm_cortex-a7_neon-vfpv4` (Raspberry Pi 2/3 mit 32 Bit), `aarch64_cortex-a72`
 (Raspberry Pi 4) und `aarch64_cortex-a76` (Raspberry Pi 5); weitere Prozessorarten folgen nach den ersten Tests. Welche Datei zu welchem Gerät passt: `packaging/GERAETE.html`. Zwei Pakete,
 `mynetworkmonitor-scan` (passend zur Prozessorart des Routers, `apk --print-arch`) und `luci-app-mynetworkmonitor`:
-per SSH mit `apk add --allow-untrusted <dateien>` installieren. Über *System → Software → Paket hochladen…* geht es
-nicht: Die Pakete sind nicht von OpenWrt signiert, und LuCI gibt `--allow-untrusted` nicht weiter (Fehlercode 99). Schritt für Schritt: `packaging/ANLEITUNG.txt`. Benötigt werden
+per SSH installieren. Am einfachsten auf dem Router mit einer Zeile, die die passende Architektur und die neueste
+Version selbst wählt, die Prüfsummen prüft und beide Pakete installiert:
+
+```sh
+wget -O - https://raw.githubusercontent.com/systemswap/MyNetworkMonitor_OpenWRT_Plugin/main/packaging/install.sh | sh
+```
+
+Ohne Internet am Router: `install.sh`, `SHA256SUMS` und die beiden Pakete aus dem Release nach `/tmp` kopieren
+(`scp -O …`) und `sh /tmp/install.sh` starten. Über *System → Software → Paket hochladen…* geht es nicht: Die Pakete
+sind nicht von OpenWrt signiert, und LuCI gibt `--allow-untrusted` nicht weiter (Fehlercode 99). Schritt für
+Schritt: `packaging/ANLEITUNG.txt`. Benötigt werden
 `luci-base`, `rpcd-mod-ucode` und `libmbedtls`, die auf OpenWrt mit Weboberfläche schon installiert sind.
 
 ## Aufbau

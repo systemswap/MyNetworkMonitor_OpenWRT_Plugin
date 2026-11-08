@@ -66,7 +66,7 @@ jobs:
                 build=true
               fi
             done
-            for doc in packaging/ANLEITUNG.txt packaging/GERAETE.html LICENSE THIRD-PARTY-NOTICES.md; do
+            for doc in packaging/ANLEITUNG.txt packaging/GERAETE.html packaging/install.sh LICENSE THIRD-PARTY-NOTICES.md; do
               name=$(basename "$doc")
               published=$(gh release download "v$version" -p "$name" -O - 2>/dev/null | sha256sum | cut -d' ' -f1)
               if [ "$published" != "$(sha256sum < "$doc" | cut -d' ' -f1)" ]; then
@@ -182,7 +182,7 @@ jobs:
       - name: Instructions, licence and checksums
         run: |
           mkdir -p dist
-          cp packaging/ANLEITUNG.txt packaging/GERAETE.html LICENSE THIRD-PARTY-NOTICES.md dist/
+          cp packaging/ANLEITUNG.txt packaging/GERAETE.html packaging/install.sh LICENSE THIRD-PARTY-NOTICES.md dist/
           # checksums only with new packages; otherwise the published ones stay
           cd dist && if ls *.apk > /dev/null 2>&1; then sha256sum *.apk > SHA256SUMS; fi; ls -la
 
@@ -198,7 +198,8 @@ jobs:
             printf '%s\n\n' "$short"
             echo "Packages for OpenWrt $OPENWRT_RELEASE (apk). Pick mynetworkmonitor-scan for the architecture of the router"
             echo "(apk --print-arch on the router; devices and chipsets: GERAETE.html) and luci-app-mynetworkmonitor;"
-            echo "installation: ANLEITUNG.txt."
+            echo "installation (on the router, by SSH): wget -O - https://raw.githubusercontent.com/${{ github.repository }}/main/packaging/install.sh | sh"
+            echo "Step by step, also without internet on the router: ANLEITUNG.txt."
             echo 'RELEASE_NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
 

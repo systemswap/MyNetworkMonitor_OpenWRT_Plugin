@@ -291,7 +291,25 @@ Zeitlich geordnet, neue ans Ende.
 - **mbedTLS im SDK:** Es liegt in der Basis-Paketquelle von OpenWrt. Statt sie in jedem Bau ganz zu klonen, holt der
   Bau nur `package/libs/mbedtls` aus genau dem Commit, aus dem das SDK gebaut ist (aus `feeds.conf.default`).
 - **Dateinamen im Release:** `mynetworkmonitor-scan_<version>_<architektur>.apk` (die Pakete selbst heißen in allen
-  Architekturen gleich), `luci-app-mynetworkmonitor_<version>_all.apk` einmal, dazu `ANLEITUNG.txt`, `LICENSE`,
-  `THIRD-PARTY-NOTICES.md` und `SHA256SUMS`. Die Pakete sind nicht signiert; die Installation bestätigt das.
+  Architekturen gleich), `luci-app-mynetworkmonitor_<version>_all.apk` einmal, dazu `ANLEITUNG.txt`, `GERAETE.html`, `install.sh`,
+  `LICENSE`, `THIRD-PARTY-NOTICES.md` und `SHA256SUMS`. Die Pakete sind nicht signiert (siehe unten).
 - **Aktionen** auf Commits festgelegt, nicht auf Tags (ein Tag kann auf anderen Code zeigen).
 
+### 08.11.2026 – Installation per Skript, ohne Signatur
+
+- **Entschieden:** Installiert wird per SSH mit `packaging/install.sh`, am einfachsten als eine Zeile, die das Skript
+  aus dem Zweig `main` lädt und an `sh` gibt. Das Skript erkennt die Paketarchitektur (`apk --print-arch`), sucht über
+  die Release-Liste von GitHub (`api.github.com`, mit `jsonfilter` gelesen) das neueste Release mit einem Scanner für
+  diese Architektur, prüft beide Pakete gegen `SHA256SUMS` und installiert sie mit `--allow-untrusted`. Liegen die
+  Pakete neben dem Skript (ohne Internet hinüberkopiert), nimmt es diese. Es braucht nur, was jedes OpenWrt-Abbild
+  mit Oberfläche mitbringt (`wget` mit HTTPS, `jsonfilter`, `sha256sum`).
+- **Warum:** Die Seite *Paket hochladen…* von LuCI gibt `--allow-untrusted` nicht an apk weiter (Fehlergedächtnis
+  Nr. 18), ohne SSH lassen sich unsignierte Pakete also nicht installieren. Das Skript erspart die Wahl der Datei und
+  das Kopieren der Adressen. Die Release-Liste statt eines festen „latest“-Links, weil GitHub diesen bei
+  Vorabversionen nicht auflöst; das erste Release mit einem Scanner der Architektur, weil ein neues Release während
+  des Baus noch unvollständig sein kann.
+- **Verworfen:** eigene Signatur – der Schlüssel müsste einmal per SSH auf den Router, ein geheimer Schlüssel wäre zu
+  verwahren, und ein Router mit dem Schlüssel vertraut allem, was damit signiert ist (Entscheidung des Nutzers).
+  Aufnahme in die offiziellen Paketquellen von OpenWrt bleibt möglich, wenn das Plugin auf echten Routern erprobt ist.
+- **Ausführung über eine Pipe:** Das Skript besteht aus Funktionen, nur die letzte Zeile startet es – bricht der
+  Download ab, läuft nichts Halbes. apk bekommt `/dev/null` als Eingabe, sonst läse es den Rest des Skripts.
