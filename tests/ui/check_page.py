@@ -109,14 +109,24 @@ for width, height in [(1920, 1080), (1366, 768)]:
                       "slow click (1.5 s held) selects the row")
             button = ff.find("#mnm-details button")
             check(ff.js("return !!document.querySelector('#mnm-details button')"), "details have the scan button")
-            # No object turned into text anywhere on the page ("[object HTMLElement]").
+            # No object turned into text anywhere on the page ("[object HTMLElement]"), and several
+            # findings on one port (HTTPS and the web page) each start a line of their own.
+            run_together = shared = 0
             for i in range(len(rows)):
                 ff.click(ff.find_all("tr.mnm-row td:nth-child(2)")[i])
                 ff.wait("return true", 0.3)
+                together, ports = ff.js("let n=0, m=0; document.querySelectorAll('#mnm-details div').forEach(d=>{"
+                                        "const s=d.querySelectorAll(':scope > strong'); if (s.length < 2) return; m++;"
+                                        "s.forEach((e, i)=>{ if (i && !(e.previousElementSibling && e.previousElementSibling.tagName == 'BR')) n++ })});"
+                                        "return [n, m]")
+                run_together += together
+                shared += ports
                 if "[object" in ff.js("return document.getElementById('mnm-details').textContent"):
                     break
             junk = ff.js("return document.body.textContent.includes('[object')")
             check(not junk, "no '[object ...]' text in table or details")
+            check(run_together == 0, "several findings on one port start a line each (%d ports with several, %d run together)"
+                  % (shared, run_together))
             stable = ff.js("const b=document.querySelector('#mnm-details button');"
                            "return new Promise(r=>setTimeout(()=>r(b.isConnected), 2500))")
             check(stable, "details button stays the same element over refreshes")

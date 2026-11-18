@@ -321,3 +321,21 @@ Regeln:
 - **Wo:** `packaging/ANLEITUNG.txt`, `README.md` (Abschnitt „Installation“).
 - **Abgesichert durch:** keinen automatischen Test. Die Wege A und B und die beiden Fehlercodes wurden von Hand in
   der Test-VM geprüft.
+
+## Nr. 19 – Seite: zwei Funde auf einem Port in den Details aneinandergeklebt
+
+- **Entdeckt:** 18.11.2026, Version 0.0.28-beta (beim Aufnehmen der Bilder für die Startseite: im Detailbereich stand
+  „443 HTTPS · TLSv1.3Web page · Title: …“). Die Anzeige so seit 0.0.16-beta (Commit 873dd65). **Behoben:**
+  0.0.29-beta.
+- **Was:** Hat ein Port mehrere Funde – auf jedem TLS-Port „HTTPS“ und „Web page“ mit dem Zertifikat –, liefen sie in
+  einer Zeile ohne Trenner zusammen: Der Name des zweiten Funds klebte am letzten Wort der Angaben des ersten.
+- **Warum:** `renderDetails` legte für jeden Fund nur Name und Angaben hintereinander; zwischen zwei Funden stand nichts.
+- **Lösung:** Jeder weitere Fund auf demselben Port beginnt eine eigene Zeile (`br` vor dem Namen). Verworfen: ein
+  Trenner „ · “ zwischen den Funden – die Angaben sind schon mit „ · “ getrennt, der zweite Fund wäre darin nicht zu
+  erkennen.
+- **Nicht tun:** Teile einer Zeile ohne Blick darauf zusammensetzen, dass eine Liste mehr als ein Element haben kann.
+- **Wo im Code:** `htdocs/…/scan.js` (`renderDetails`, Zeilen der Dienste).
+- **Abgesichert durch:** `tests/ui/check_page.py` („several findings on one port start a line each“, klickt jedes Gerät
+  an; mit dem alten Stand in der Test-VM 3 von 3 Ports zusammengeklebt, mit dem neuen keiner).
+- **Gegenprobe an echten Geräten:** steht aus – an einem Gerät mit Weboberfläche über HTTPS (Router, NAS, Drucker)
+  „Scan this device“ ausführen: In den Details müssen „HTTPS · TLS…“ und „Web page · Title: …“ auf zwei Zeilen stehen.

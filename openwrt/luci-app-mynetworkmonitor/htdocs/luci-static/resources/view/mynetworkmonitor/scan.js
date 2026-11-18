@@ -490,8 +490,12 @@ return view.extend({
 			// The parts of each line are spread into one flat list: E() resolves
 			// one level of arrays only, a nested one would end up as the text
 			// "[object HTMLElement]" (docs/FEHLERGEDAECHTNIS.md, No. 10).
+			// Several findings on one port (HTTPS and the web page with its certificate on every
+			// TLS port) each start a line of their own; run together, the name of the second stuck
+			// to the detail of the first (docs/FEHLERGEDAECHTNIS.md, No. 19).
 			const what = found.length
-				? found.flatMap(s => [ E('strong', {}, s.name || names[s.id] || s.id), s.detail ? E('span', { 'class': 'mnm-sub' }, ' · ' + s.detail) : '' ])
+				? found.flatMap((s, i) => [ i ? E('br') : '', E('strong', {}, s.name || names[s.id] || s.id),
+					s.detail ? E('span', { 'class': 'mnm-sub' }, ' · ' + s.detail) : '' ])
 				: [ E('span', { 'class': 'mnm-sub' }, d.services ? _('open, not recognised') : (SERVICES[p] || '')) ];
 			return E('div', {}, [ E('span', { 'class': 'mnm-mono' }, String(p)), ' ', ...what ]);
 		});
